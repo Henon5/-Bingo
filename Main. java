@@ -1,9 +1,7 @@
-// ==================== POCKETBASE CONFIGURATION ====================
-// REPLACE THIS URL WITH YOUR RAILWAY POCKETBASE URL
-const POCKETBASE_URL = "https://your-pocketbase.railway.app";
-const pb = new PocketBase(POCKETBASE_URL);
+// ==================== FIXED SCRIPT - NO SERVER REQUIRED ====================
+// This version uses only localStorage and works immediately
 
-// ==================== ETHIOPIAN MALE NAMES ====================
+// Ethiopian Male Names
 const ETHIOPIAN_NAMES = [
     "Abel", "Abiy", "Abraham", "Amanuel", "Amlaku", "Amsalu", "Anteneh", "Aregawi", "Assefa", "Ayele",
     "Bayu", "Belete", "Bereket", "Biruk", "Chala", "Dagnachew", "Dawit", "Demeke", "Dereje", "Desalegn",
@@ -14,12 +12,12 @@ const ETHIOPIAN_NAMES = [
     "Tsegaye", "Tsegay", "Wondimu", "Worku", "Yared", "Yilma", "Yonas", "Yosef", "Zelalem", "Zewdu"
 ];
 
-// ==================== GAME STATE ====================
+// Game State
 let gameNumberCounter = 0;
-let casinoUsers = [];
-let pendingWithdrawals = [];
-let userStreaks = {};
-let gameHistory = [];
+let casinoUsers = JSON.parse(localStorage.getItem('casinoUsers') || '[]');
+let pendingWithdrawals = JSON.parse(localStorage.getItem('pendingWithdrawals') || '[]');
+let userStreaks = JSON.parse(localStorage.getItem('userStreaks') || '{}');
+let gameHistory = JSON.parse(localStorage.getItem('gameHistory') || '[]');
 let currentUser = null;
 let activeGameSession = null;
 let playerBingoCard = [];
@@ -27,98 +25,9 @@ let isWaitingForPlayers = false;
 let currentEntryAmount = 0;
 let housePlayersInGame = [];
 
-// Constants
 const ADMIN_CRED = { name: '@rasenok', phone: '0962234766', password: '752121' };
 const DEPOSIT_INFO = { telebirr: "0921302111", cbe: "1000318833625" };
 const SUPPORT_INFO = { phone: "0921302111", telegram: "@rasenok" };
-
-// ==================== POCKETBASE DATA FUNCTIONS ====================
-async function loadDataFromPocketBase() {
-    try {
-        // Load users
-        const usersResult = await pb.collection('users').getFullList();
-        if (usersResult.length > 0) {
-            casinoUsers = usersResult;
-            localStorage.setItem('casinoUsers', JSON.stringify(casinoUsers));
-        }
-        
-        // Load game history
-        const historyResult = await pb.collection('game_history').getFullList({ sort: '-created', limit: 20 });
-        if (historyResult.length > 0) {
-            gameHistory = historyResult.map(h => `${new Date(h.created).toLocaleTimeString()} - 🏆 ${h.winner_name} won ${h.prize_amount} Birr!`);
-            localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
-        }
-        
-        // Load streaks
-        const streaksResult = await pb.collection('user_streaks').getFullList();
-        if (streaksResult.length > 0) {
-            streaksResult.forEach(s => { userStreaks[s.user_phone] = { wins: s.wins, losses: s.losses, streak: s.streak }; });
-            localStorage.setItem('userStreaks', JSON.stringify(userStreaks));
-        }
-        
-        document.getElementById('serverStatus').innerHTML = `✅ Connected to PocketBase | ${casinoUsers.length} Users`;
-        document.getElementById('serverStatus').style.background = 'rgba(42,157,143,0.7)';
-    } catch (error) {
-        console.error("PocketBase connection error:", error);
-        document.getElementById('serverStatus').innerHTML = `⚠️ PocketBase not reachable. Using local storage only.`;
-        document.getElementById('serverStatus').style.background = 'rgba(248,197,85,0.7)';
-    }
-}
-
-async function saveUserToPocketBase(user) {
-    try {
-        // Check if user exists
-        const existing = await pb.collection('users').getFirstListItem(`phone="${user.phone}"`);
-        if (existing) {
-            await pb.collection('users').update(existing.id, {
-                name: user.name,
-                balance: user.balance,
-                approved: user.approved,
-                blocked: user.blocked,
-                wins: user.wins,
-                losses: user.losses
-            });
-        }
-    } catch {
-        // User doesn't exist, create new
-        await pb.collection('users').create({
-            phone: user.phone,
-            name: user.name,
-            password: user.password,
-            balance: user.balance || 0,
-            approved: user.approved || false,
-            blocked: user.blocked || false,
-            wins: user.wins || 0,
-            losses: user.losses || 0
-        });
-    }
-}
-
-async function saveGameHistoryToPocketBase(winnerName, prizeAmount, entryAmount, totalPlayers, gameNumber) {
-    try {
-        await pb.collection('game_history').create({
-            winner_name: winnerName,
-            prize_amount: prizeAmount,
-            entry_amount: entryAmount,
-            total_players: totalPlayers,
-            game_number: gameNumber,
-            user_phone: currentUser?.phone || ''
-        });
-    } catch (error) {
-        console.error("Error saving game history:", error);
-    }
-}
-
-async function saveStreakToPocketBase(phone, streak, wins, losses) {
-    try {
-        const existing = await pb.collection('user_streaks').getFirstListItem(`user_phone="${phone}"`);
-        if (existing) {
-            await pb.collection('user_streaks').update(existing.id, { streak: streak, wins: wins, losses: losses });
-        }
-    } catch {
-        await pb.collection('user_streaks').create({ user_phone: phone, streak: streak, wins: wins, losses: losses });
-    }
-}
 
 // ==================== LOCAL STORAGE FUNCTIONS ====================
 function saveLocalData() {
@@ -126,6 +35,7 @@ function saveLocalData() {
     localStorage.setItem('pendingWithdrawals', JSON.stringify(pendingWithdrawals));
     localStorage.setItem('userStreaks', JSON.stringify(userStreaks));
     localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+    localStorage.setItem('currentUser', currentUser ? JSON.stringify(currentUser) : '');
 }
 
 // ==================== UI FUNCTIONS ====================
@@ -149,7 +59,7 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => showToast(`Copied: ${text}`, 'success'));
 }
 
-// ==================== DEPOSIT & WITHDRAWAL FUNCTIONS ====================
+// ==================== DEPOSIT & WITHDRAWAL ====================
 function showDepositPopup() {
     showPopup(`<div class="popup-header"><h2 class="popup-title">💰 Deposit Funds</h2><button class="close-popup" onclick="closePopup()">×</button></div>
     <div class="account-info-card">
@@ -162,7 +72,7 @@ function showDepositPopup() {
     <button class="secondary" onclick="closePopup()">Cancel</button>`);
 }
 
-async function submitDepositRequest() {
+function submitDepositRequest() {
     const amount = parseInt(document.getElementById('depositAmount')?.value);
     const tid = document.getElementById('transactionId')?.value.trim();
     if (!amount || amount < 50) { showToast("Minimum 50 Birr", 'error'); return; }
@@ -290,11 +200,6 @@ function endGameWithWinner(winner, isPlayerWinner) {
         userStreaks[currentUser.phone] = streak;
         gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 YOU won ${prizeAmount} Birr!`);
         showToast(`🎉 YOU WON ${prizeAmount} Birr! 🎉`, 'success');
-        
-        // Save to PocketBase
-        saveUserToPocketBase(currentUser);
-        saveStreakToPocketBase(currentUser.phone, streak.streak, streak.wins, streak.losses);
-        
         for (let i = 0; i < 80; i++) {
             let c = document.createElement('div');
             c.className = 'confetti';
@@ -311,17 +216,10 @@ function endGameWithWinner(winner, isPlayerWinner) {
         if (currentUser) userStreaks[currentUser.phone] = streak;
         gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 ${winnerName} won ${prizeAmount} Birr!`);
         showToast(`🏆 ${winnerName} won ${prizeAmount} Birr!`, 'info');
-        
-        if (currentUser) {
-            saveUserToPocketBase(currentUser);
-            saveStreakToPocketBase(currentUser.phone, streak.streak, streak.wins, streak.losses);
-        }
     }
-    
     saveLocalData();
     updateUserUI();
     if (gameHistory.length > 20) gameHistory.pop();
-    saveGameHistoryToPocketBase(winnerName, prizeAmount, activeGameSession.entryFee, activeGameSession.players.length, gameNumberCounter);
 
     const announcement = document.createElement('div');
     announcement.className = 'winner-announcement';
@@ -387,7 +285,6 @@ function startWaitingForPlayers(entryAmount) {
     currentUser.balance -= entryAmount;
     casinoUsers = casinoUsers.map(u => u.phone === currentUser.phone ? currentUser : u);
     saveLocalData();
-    saveUserToPocketBase(currentUser);
     updateUserUI();
 
     const housePlayerCount = Math.floor(Math.random() * 15) + 8;
@@ -431,7 +328,6 @@ function cancelWaiting() {
         currentUser.balance += currentEntryAmount;
         casinoUsers = casinoUsers.map(u => u.phone === currentUser.phone ? currentUser : u);
         saveLocalData();
-        saveUserToPocketBase(currentUser);
         updateUserUI();
         resetGameSession();
         isWaitingForPlayers = false;
@@ -509,7 +405,7 @@ function showProfilePopup() {
 }
 
 // ==================== ADMIN FUNCTIONS ====================
-async function showAdminDashboard() {
+function showAdminDashboard() {
     hideAllPages();
     document.getElementById('adminPage').classList.remove('hidden');
     
@@ -554,7 +450,6 @@ window.approveUser = (phone) => {
     if (u) {
         u.approved = true;
         saveLocalData();
-        saveUserToPocketBase(u);
         showAdminDashboard();
         showToast("User approved!", 'success');
     }
@@ -574,7 +469,6 @@ window.adminAddFunds = () => {
     if (u && amount > 0) {
         u.balance = (u.balance || 0) + amount;
         saveLocalData();
-        saveUserToPocketBase(u);
         showToast(`Added ${amount} Birr to ${u.name}`, 'success');
         showAdminDashboard();
     } else {
@@ -586,18 +480,22 @@ function renderAdminContent(section) {
     if (section === 'dashboard') showAdminDashboard();
 }
 
-// ==================== AUTHENTICATION ====================
-async function handleLogin() {
+// ==================== AUTHENTICATION (FIXED - NO API CALLS) ====================
+function handleLogin() {
     const name = document.getElementById('name').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const pwd = document.getElementById('password').value.trim();
     
-    if (!name || !phone || !pwd) { showToast("All fields required", 'error'); return; }
+    if (!name || !phone || !pwd) { 
+        showToast("All fields required", 'error'); 
+        return; 
+    }
     
     // Admin login
     if (name === ADMIN_CRED.name && phone === ADMIN_CRED.phone && pwd === ADMIN_CRED.password) {
         currentUser = { name, phone, isAdmin: true };
         showAdminDashboard();
+        showToast("Welcome Admin!", 'success');
         return;
     }
     
@@ -605,11 +503,14 @@ async function handleLogin() {
     let user = casinoUsers.find(u => u.phone === phone && u.password === pwd);
     
     if (user) {
-        if (user.blocked) { showToast("Account blocked", 'error'); return; }
+        if (user.blocked) { 
+            showToast("Account blocked", 'error'); 
+            return; 
+        }
         currentUser = user;
         showLobby();
         updateUserUI();
-        showToast(`Welcome ${user.name}`, 'success');
+        showToast(`Welcome ${user.name}!`, 'success');
     } else {
         // Register new user
         let newUser = {
@@ -626,7 +527,6 @@ async function handleLogin() {
         casinoUsers.push(newUser);
         currentUser = newUser;
         saveLocalData();
-        saveUserToPocketBase(newUser);
         showLobby();
         updateUserUI();
         showToast("Registered! Wait admin approval.", 'info');
@@ -642,19 +542,19 @@ function handleLogout() {
 }
 
 // ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', async () => {
-    // Load data from PocketBase
-    await loadDataFromPocketBase();
-    
-    // Load local data as fallback
-    const savedUsers = localStorage.getItem('casinoUsers');
-    if (savedUsers && casinoUsers.length === 0) casinoUsers = JSON.parse(savedUsers);
-    const savedWithdrawals = localStorage.getItem('pendingWithdrawals');
-    if (savedWithdrawals) pendingWithdrawals = JSON.parse(savedWithdrawals);
-    const savedStreaks = localStorage.getItem('userStreaks');
-    if (savedStreaks) userStreaks = JSON.parse(savedStreaks);
-    const savedHistory = localStorage.getItem('gameHistory');
-    if (savedHistory) gameHistory = JSON.parse(savedHistory);
+document.addEventListener('DOMContentLoaded', () => {
+    // Load saved user session
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        try {
+            const u = JSON.parse(savedUser);
+            if (u && !u.isAdmin) {
+                currentUser = u;
+                showLobby();
+                updateUserUI();
+            }
+        } catch(e) {}
+    }
     
     // Event Listeners
     document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
@@ -672,16 +572,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('gameProfileBtn')?.addEventListener('click', showProfilePopup);
     document.getElementById('gameDepositBtn')?.addEventListener('click', showDepositPopup);
     
-    // Check for saved user session
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        try {
-            const u = JSON.parse(savedUser);
-            if (u && !u.isAdmin) {
-                currentUser = u;
-                showLobby();
-                updateUserUI();
-            }
-        } catch(e) {}
-    }
+    // Update history display
+    updateHistoryDisplay();
+    
+    document.getElementById('serverStatus').innerHTML = '✅ Game Ready - Local Mode Active';
 });
