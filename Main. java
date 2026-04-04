@@ -1,0 +1,687 @@
+// ==================== POCKETBASE CONFIGURATION ====================
+// REPLACE THIS URL WITH YOUR RAILWAY POCKETBASE URL
+const POCKETBASE_URL = "https://your-pocketbase.railway.app";
+const pb = new PocketBase(POCKETBASE_URL);
+
+// ==================== ETHIOPIAN MALE NAMES ====================
+const ETHIOPIAN_NAMES = [
+    "Abel", "Abiy", "Abraham", "Amanuel", "Amlaku", "Amsalu", "Anteneh", "Aregawi", "Assefa", "Ayele",
+    "Bayu", "Belete", "Bereket", "Biruk", "Chala", "Dagnachew", "Dawit", "Demeke", "Dereje", "Desalegn",
+    "Elias", "Endale", "Ermias", "Eyob", "Fekadu", "Fikre", "Fikru", "Gashaw", "Gebre", "Gemechu",
+    "Getachew", "Girma", "Gizachew", "Habtamu", "Haile", "Henok", "Kassahun", "Kebede", "Kifle", "Lemma",
+    "Mamo", "Mekonnen", "Melaku", "Mengistu", "Mesfin", "Mulugeta", "Nahom", "Natnael", "Nega", "Robel",
+    "Samuel", "Sisay", "Solomon", "Tadesse", "Tafesse", "Tarekegn", "Tekle", "Tesfaye", "Tilahun",
+    "Tsegaye", "Tsegay", "Wondimu", "Worku", "Yared", "Yilma", "Yonas", "Yosef", "Zelalem", "Zewdu"
+];
+
+// ==================== GAME STATE ====================
+let gameNumberCounter = 0;
+let casinoUsers = [];
+let pendingWithdrawals = [];
+let userStreaks = {};
+let gameHistory = [];
+let currentUser = null;
+let activeGameSession = null;
+let playerBingoCard = [];
+let isWaitingForPlayers = false;
+let currentEntryAmount = 0;
+let housePlayersInGame = [];
+
+// Constants
+const ADMIN_CRED = { name: '@rasenok', phone: '0962234766', password: '752121' };
+const DEPOSIT_INFO = { telebirr: "0921302111", cbe: "1000318833625" };
+const SUPPORT_INFO = { phone: "0921302111", telegram: "@rasenok" };
+
+// ==================== POCKETBASE DATA FUNCTIONS ====================
+async function loadDataFromPocketBase() {
+    try {
+        // Load users
+        const usersResult = await pb.collection('users').getFullList();
+        if (usersResult.length > 0) {
+            casinoUsers = usersResult;
+            localStorage.setItem('casinoUsers', JSON.stringify(casinoUsers));
+        }
+        
+        // Load game history
+        const historyResult = await pb.collection('game_history').getFullList({ sort: '-created', limit: 20 });
+        if (historyResult.length > 0) {
+            gameHistory = historyResult.map(h => `${new Date(h.created).toLocaleTimeString()} - 🏆 ${h.winner_name} won ${h.prize_amount} Birr!`);
+            localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+        }
+        
+        // Load streaks
+        const streaksResult = await pb.collection('user_streaks').getFullList();
+        if (streaksResult.length > 0) {
+            streaksResult.forEach(s => { userStreaks[s.user_phone] = { wins: s.wins, losses: s.losses, streak: s.streak }; });
+            localStorage.setItem('userStreaks', JSON.stringify(userStreaks));
+        }
+        
+        document.getElementById('serverStatus').innerHTML = `✅ Connected to PocketBase | ${casinoUsers.length} Users`;
+        document.getElementById('serverStatus').style.background = 'rgba(42,157,143,0.7)';
+    } catch (error) {
+        console.error("PocketBase connection error:", error);
+        document.getElementById('serverStatus').innerHTML = `⚠️ PocketBase not reachable. Using local storage only.`;
+        document.getElementById('serverStatus').style.background = 'rgba(248,197,85,0.7)';
+    }
+}
+
+async function saveUserToPocketBase(user) {
+    try {
+        // Check if user exists
+        const existing = await pb.collection('users').getFirstListItem(`phone="${user.phone}"`);
+        if (existing) {
+            await pb.collection('users').update(existing.id, {
+                name: user.name,
+                balance: user.balance,
+                approved: user.approved,
+                blocked: user.blocked,
+                wins: user.wins,
+                losses: user.losses
+            });
+        }
+    } catch {
+        // User doesn't exist, create new
+        await pb.collection('users').create({
+            phone: user.phone,
+            name: user.name,
+            password: user.password,
+            balance: user.balance || 0,
+            approved: user.approved || false,
+            blocked: user.blocked || false,
+            wins: user.wins || 0,
+            losses: user.losses || 0
+        });
+    }
+}
+
+async function saveGameHistoryToPocketBase(winnerName, prizeAmount, entryAmount, totalPlayers, gameNumber) {
+    try {
+        await pb.collection('game_history').create({
+            winner_name: winnerName,
+            prize_amount: prizeAmount,
+            entry_amount: entryAmount,
+            total_players: totalPlayers,
+            game_number: gameNumber,
+            user_phone: currentUser?.phone || ''
+        });
+    } catch (error) {
+        console.error("Error saving game history:", error);
+    }
+}
+
+async function saveStreakToPocketBase(phone, streak, wins, losses) {
+    try {
+        const existing = await pb.collection('user_streaks').getFirstListItem(`user_phone="${phone}"`);
+        if (existing) {
+            await pb.collection('user_streaks').update(existing.id, { streak: streak, wins: wins, losses: losses });
+        }
+    } catch {
+        await pb.collection('user_streaks').create({ user_phone: phone, streak: streak, wins: wins, losses: losses });
+    }
+}
+
+// ==================== LOCAL STORAGE FUNCTIONS ====================
+function saveLocalData() {
+    localStorage.setItem('casinoUsers', JSON.stringify(casinoUsers));
+    localStorage.setItem('pendingWithdrawals', JSON.stringify(pendingWithdrawals));
+    localStorage.setItem('userStreaks', JSON.stringify(userStreaks));
+    localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+}
+
+// ==================== UI FUNCTIONS ====================
+function showToast(msg, type = 'info') {
+    const cont = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<strong>${type.toUpperCase()}</strong><br>${msg}`;
+    cont.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+function showPopup(content) {
+    document.getElementById('popupContainer').innerHTML = `<div class="popup-overlay" onclick="if(event.target === this) closePopup()"><div class="popup-modal">${content}</div></div>`;
+}
+
+function closePopup() { document.getElementById('popupContainer').innerHTML = ''; }
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => showToast(`Copied: ${text}`, 'success'));
+}
+
+// ==================== DEPOSIT & WITHDRAWAL FUNCTIONS ====================
+function showDepositPopup() {
+    showPopup(`<div class="popup-header"><h2 class="popup-title">💰 Deposit Funds</h2><button class="close-popup" onclick="closePopup()">×</button></div>
+    <div class="account-info-card">
+        <div class="account-row"><span class="account-label"><i class="fas fa-mobile-alt"></i> Tele Birr</span><div><span class="account-value">${DEPOSIT_INFO.telebirr}</span><button class="copy-btn" onclick="copyToClipboard('${DEPOSIT_INFO.telebirr}')">Copy</button></div></div>
+        <div class="account-row"><span class="account-label"><i class="fas fa-university"></i> CBE Account</span><div><span class="account-value">${DEPOSIT_INFO.cbe}</span><button class="copy-btn" onclick="copyToClipboard('${DEPOSIT_INFO.cbe}')">Copy</button></div></div>
+    </div>
+    <div class="input-group"><label>Amount (Min 50 Birr)</label><input type="number" id="depositAmount" placeholder="Enter amount"></div>
+    <div class="input-group"><label>Transaction ID</label><input type="text" id="transactionId" placeholder="Enter transaction ID"></div>
+    <button onclick="submitDepositRequest()">Submit Request</button>
+    <button class="secondary" onclick="closePopup()">Cancel</button>`);
+}
+
+async function submitDepositRequest() {
+    const amount = parseInt(document.getElementById('depositAmount')?.value);
+    const tid = document.getElementById('transactionId')?.value.trim();
+    if (!amount || amount < 50) { showToast("Minimum 50 Birr", 'error'); return; }
+    if (!tid) { showToast("Enter transaction ID", 'error'); return; }
+    pendingWithdrawals.push({ type: 'deposit', name: currentUser.name, phone: currentUser.phone, amount, transactionId: tid, timestamp: new Date().toISOString() });
+    saveLocalData();
+    closePopup();
+    showToast(`Deposit request of ${amount} Birr submitted!`, 'success');
+}
+
+function showWithdrawPopup() {
+    showPopup(`<div class="popup-header"><h2 class="popup-title">💸 Withdraw Funds</h2><button class="close-popup" onclick="closePopup()">×</button></div>
+    <div class="account-info-card"><div class="account-row"><span>Balance:</span><strong style="color:var(--accent)">${currentUser?.balance || 0} Birr</strong></div><div class="account-row"><span>Min:</span><strong>200 Birr</strong></div></div>
+    <div class="input-group"><label>Amount</label><input type="number" id="withdrawAmount" placeholder="Enter amount" max="${currentUser?.balance || 0}"></div>
+    <div class="input-group"><label>Tele Birr Number</label><input type="tel" id="withdrawPhone" value="${currentUser?.phone || ''}"></div>
+    <button onclick="submitWithdrawRequest()">Submit</button>
+    <button class="secondary" onclick="closePopup()">Cancel</button>`);
+}
+
+function submitWithdrawRequest() {
+    const amount = parseInt(document.getElementById('withdrawAmount')?.value);
+    const phone = document.getElementById('withdrawPhone')?.value.trim();
+    if (!amount || amount < 200) { showToast("Minimum 200 Birr", 'error'); return; }
+    if (amount > (currentUser?.balance || 0)) { showToast("Insufficient balance", 'error'); return; }
+    if (!phone) { showToast("Enter phone number", 'error'); return; }
+    pendingWithdrawals.push({ name: currentUser.name, phone, amount, timestamp: new Date().toISOString() });
+    saveLocalData();
+    closePopup();
+    showToast(`Withdrawal request of ${amount} Birr submitted!`, 'success');
+}
+
+function showSupportPopup() {
+    showPopup(`<div class="popup-header"><h2 class="popup-title">📞 Customer Support</h2><button class="close-popup" onclick="closePopup()">×</button></div>
+    <div class="account-info-card">
+        <div class="account-row"><span class="account-label"><i class="fas fa-phone-alt"></i> Phone</span><div><span class="account-value">${SUPPORT_INFO.phone}</span><button class="copy-btn" onclick="copyToClipboard('${SUPPORT_INFO.phone}')">Copy</button></div></div>
+        <div class="account-row"><span class="account-label"><i class="fab fa-telegram"></i> Telegram</span><div><span class="account-value">${SUPPORT_INFO.telegram}</span><button class="copy-btn" onclick="copyToClipboard('${SUPPORT_INFO.telegram}')">Copy</button></div></div>
+    </div>
+    <div class="input-group"><label>Message</label><textarea id="supportMessage" rows="3" style="width:100%; padding:10px; background:rgba(255,255,255,0.1); border-radius:12px; color:white;"></textarea></div>
+    <button onclick="submitSupportMessage()">Send</button>
+    <button class="secondary" onclick="closePopup()">Close</button>`);
+}
+
+function submitSupportMessage() {
+    const message = document.getElementById('supportMessage')?.value.trim();
+    if (!message) { showToast("Enter message", 'error'); return; }
+    closePopup();
+    showToast("Support message sent!", 'success');
+}
+
+// ==================== GAME FUNCTIONS ====================
+function generateRandomHousePlayers(count) {
+    const shuffled = [...ETHIOPIAN_NAMES];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, count).map((name, idx) => ({ name, phone: `house_${Date.now()}_${idx}`, isHouse: true }));
+}
+
+function generateRandomCard() {
+    let numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+    for (let i = numbers.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+    }
+    let selected = numbers.slice(0, 24);
+    let card = [];
+    let idx = 0;
+    for (let r = 0; r < 5; r++) {
+        let row = [];
+        for (let c = 0; c < 5; c++) {
+            if (r === 2 && c === 2) row.push({ val: 'FREE', called: true });
+            else row.push({ val: selected[idx++], called: false });
+        }
+        card.push(row);
+    }
+    return card;
+}
+
+function renderBingoCard(card) {
+    const container = document.getElementById('bingoCard');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+            let cell = card[r][c];
+            let div = document.createElement('div');
+            div.className = 'bingo-cell';
+            if (cell.val === 'FREE') div.classList.add('free');
+            if (cell.called) div.classList.add('called');
+            div.innerText = cell.val === 'FREE' ? 'FREE' : cell.val;
+            container.appendChild(div);
+        }
+    }
+}
+
+function checkBingoOnCard(card, calledSet) {
+    for (let i = 0; i < 5; i++) {
+        if (card[i].every(cell => (cell.val === 'FREE') || calledSet.has(cell.val))) return true;
+        if (card.every(row => (row[i].val === 'FREE') || calledSet.has(row[i].val))) return true;
+    }
+    let d1 = true, d2 = true;
+    for (let i = 0; i < 5; i++) {
+        if (!(card[i][i].val === 'FREE' || calledSet.has(card[i][i].val))) d1 = false;
+        if (!(card[i][4 - i].val === 'FREE' || calledSet.has(card[i][4 - i].val))) d2 = false;
+    }
+    return d1 || d2;
+}
+
+function endGameWithWinner(winner, isPlayerWinner) {
+    if (!activeGameSession || activeGameSession.winnerDeclared) return;
+    activeGameSession.winnerDeclared = true;
+    if (activeGameSession.intervalId) clearInterval(activeGameSession.intervalId);
+    if (activeGameSession.timerInterval) clearInterval(activeGameSession.timerInterval);
+
+    let prizeAmount = activeGameSession.prizePool;
+    let winnerName = winner.name;
+
+    if (isPlayerWinner && winner.phone === currentUser?.phone) {
+        currentUser.balance += prizeAmount;
+        casinoUsers = casinoUsers.map(u => u.phone === currentUser.phone ? currentUser : u);
+        let streak = userStreaks[currentUser.phone] || { wins: 0, losses: 0, streak: 0 };
+        streak.wins += 1;
+        streak.streak = streak.streak > 0 ? streak.streak + 1 : 1;
+        userStreaks[currentUser.phone] = streak;
+        gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 YOU won ${prizeAmount} Birr!`);
+        showToast(`🎉 YOU WON ${prizeAmount} Birr! 🎉`, 'success');
+        
+        // Save to PocketBase
+        saveUserToPocketBase(currentUser);
+        saveStreakToPocketBase(currentUser.phone, streak.streak, streak.wins, streak.losses);
+        
+        for (let i = 0; i < 80; i++) {
+            let c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.animationDelay = Math.random() * 0.5 + 's';
+            c.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            document.getElementById('celebration').appendChild(c);
+            setTimeout(() => c.remove(), 2000);
+        }
+    } else {
+        let streak = userStreaks[currentUser?.phone] || { wins: 0, losses: 0, streak: 0 };
+        streak.losses += 1;
+        streak.streak = streak.streak < 0 ? streak.streak - 1 : -1;
+        if (currentUser) userStreaks[currentUser.phone] = streak;
+        gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 ${winnerName} won ${prizeAmount} Birr!`);
+        showToast(`🏆 ${winnerName} won ${prizeAmount} Birr!`, 'info');
+        
+        if (currentUser) {
+            saveUserToPocketBase(currentUser);
+            saveStreakToPocketBase(currentUser.phone, streak.streak, streak.wins, streak.losses);
+        }
+    }
+    
+    saveLocalData();
+    updateUserUI();
+    if (gameHistory.length > 20) gameHistory.pop();
+    saveGameHistoryToPocketBase(winnerName, prizeAmount, activeGameSession.entryFee, activeGameSession.players.length, gameNumberCounter);
+
+    const announcement = document.createElement('div');
+    announcement.className = 'winner-announcement';
+    announcement.innerHTML = `<i class="fas fa-trophy" style="font-size: 2rem; color: gold;"></i><h2 style="margin: 10px 0;">WINNER!</h2><h1 style="color: var(--accent);">${winnerName}</h1><p>Won ${prizeAmount} Birr!</p><button onclick="this.parentElement.remove()" style="margin-top: 10px;">Continue</button>`;
+    document.body.appendChild(announcement);
+    setTimeout(() => { if (announcement) announcement.remove(); resetGameSession(); showLobby(); }, 4000);
+}
+
+function startGameCountdownAndPlay() {
+    if (!activeGameSession || activeGameSession.winnerDeclared) return;
+    activeGameSession.timeLeft = 210;
+    activeGameSession.timerInterval = setInterval(() => {
+        if (!activeGameSession || activeGameSession.winnerDeclared) return;
+        activeGameSession.timeLeft--;
+        const mins = Math.floor(activeGameSession.timeLeft / 60);
+        const secs = activeGameSession.timeLeft % 60;
+        if (document.getElementById('gameTimeLeft')) document.getElementById('gameTimeLeft').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if (activeGameSession.timeLeft <= 0) {
+            clearInterval(activeGameSession.timerInterval);
+            clearInterval(activeGameSession.intervalId);
+            endGameWithWinner(housePlayersInGame[Math.floor(Math.random() * housePlayersInGame.length)], false);
+        }
+    }, 1000);
+
+    activeGameSession.intervalId = setInterval(() => {
+        if (!activeGameSession || activeGameSession.winnerDeclared) return;
+        let remaining = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !activeGameSession.calledNumbers.includes(n));
+        if (remaining.length === 0) { endGameWithWinner(housePlayersInGame[Math.floor(Math.random() * housePlayersInGame.length)], false); return; }
+        let newNum = remaining[Math.floor(Math.random() * remaining.length)];
+        activeGameSession.calledNumbers.push(newNum);
+        activeGameSession.currentNumber = newNum;
+        if (document.getElementById('currentNumber')) document.getElementById('currentNumber').innerText = newNum;
+        if (document.getElementById('calledNumbersCount')) document.getElementById('calledNumbersCount').innerText = activeGameSession.calledNumbers.length;
+        let calledSet = new Set(activeGameSession.calledNumbers);
+        if (checkBingoOnCard(playerBingoCard, calledSet)) {
+            let shouldWin = (gameNumberCounter % 5 === 1);
+            if (shouldWin) endGameWithWinner(currentUser, true);
+            else endGameWithWinner(housePlayersInGame[Math.floor(Math.random() * housePlayersInGame.length)], false);
+        }
+    }, 2800);
+}
+
+function startGameNow() {
+    if (!activeGameSession || activeGameSession.isActive) return;
+    isWaitingForPlayers = false;
+    activeGameSession.isActive = true;
+    activeGameSession.calledNumbers = [];
+    document.getElementById('playerCount').innerText = activeGameSession.players.length;
+    document.getElementById('gameEntry').innerText = activeGameSession.entryFee + ' Birr';
+    document.getElementById('prizePool').innerText = activeGameSession.prizePool;
+    playerBingoCard = generateRandomCard();
+    renderBingoCard(playerBingoCard);
+    hideAllPages();
+    document.getElementById('gamePage').classList.remove('hidden');
+    startGameCountdownAndPlay();
+    showToast(`🔥 Game started with ${activeGameSession.players.length} players! Prize: ${activeGameSession.prizePool} Birr`, 'success');
+}
+
+function startWaitingForPlayers(entryAmount) {
+    isWaitingForPlayers = true;
+    currentEntryAmount = entryAmount;
+    gameNumberCounter++;
+    currentUser.balance -= entryAmount;
+    casinoUsers = casinoUsers.map(u => u.phone === currentUser.phone ? currentUser : u);
+    saveLocalData();
+    saveUserToPocketBase(currentUser);
+    updateUserUI();
+
+    const housePlayerCount = Math.floor(Math.random() * 15) + 8;
+    housePlayersInGame = generateRandomHousePlayers(housePlayerCount);
+    let allPlayers = [currentUser, ...housePlayersInGame];
+    let prizePool = entryAmount * allPlayers.length;
+
+    activeGameSession = {
+        isActive: false,
+        players: allPlayers.map(p => p.phone),
+        playerNames: allPlayers.map(p => ({ name: p.name })),
+        entryFee: entryAmount,
+        prizePool: prizePool,
+        calledNumbers: [],
+        currentNumber: null,
+        intervalId: null,
+        timerInterval: null,
+        timeLeft: 210,
+        winnerDeclared: false
+    };
+
+    document.getElementById('totalPlayersCount').innerText = allPlayers.length;
+    document.getElementById('waitingStatus').innerHTML = `✅ ${allPlayers.length} Players Ready! Starting...`;
+    const playersList = document.getElementById('activePlayersList');
+    if (playersList) {
+        playersList.innerHTML = activeGameSession.playerNames.slice(0, 30).map(p =>
+            `<span class="player-badge ${p.name === currentUser.name ? '' : 'house'}"><i class="fas ${p.name === currentUser.name ? 'fa-crown' : 'fa-user-circle'}"></i> ${p.name}</span>`
+        ).join('');
+        if (activeGameSession.playerNames.length > 30) {
+            playersList.innerHTML += `<span class="player-badge">+${activeGameSession.playerNames.length - 30} more</span>`;
+        }
+    }
+
+    setTimeout(() => {
+        if (isWaitingForPlayers && activeGameSession && !activeGameSession.isActive) startGameNow();
+    }, 3000);
+}
+
+function cancelWaiting() {
+    if (isWaitingForPlayers && activeGameSession) {
+        currentUser.balance += currentEntryAmount;
+        casinoUsers = casinoUsers.map(u => u.phone === currentUser.phone ? currentUser : u);
+        saveLocalData();
+        saveUserToPocketBase(currentUser);
+        updateUserUI();
+        resetGameSession();
+        isWaitingForPlayers = false;
+        showToast(`Cancelled. ${currentEntryAmount} Birr refunded.`, 'info');
+        showLobby();
+    }
+}
+
+function resetGameSession() {
+    if (activeGameSession?.intervalId) clearInterval(activeGameSession.intervalId);
+    if (activeGameSession?.timerInterval) clearInterval(activeGameSession.timerInterval);
+    activeGameSession = null;
+    isWaitingForPlayers = false;
+}
+
+function handleEntry(amount) {
+    if (!currentUser || currentUser.isAdmin) { showToast("Login first", 'error'); return; }
+    if (currentUser.balance < amount) { showToast(`Need ${amount} Birr`, 'error'); return; }
+    if (!currentUser.approved && currentUser.phone !== ADMIN_CRED.phone) { showToast("Pending admin approval", 'warning'); return; }
+    if (isWaitingForPlayers || (activeGameSession && activeGameSession.isActive)) { showToast("Game in progress", 'warning'); return; }
+    startWaitingForPlayers(amount);
+    hideAllPages();
+    document.getElementById('lobbyPage').classList.remove('hidden');
+    document.getElementById('waitingSection').classList.remove('hidden');
+    document.querySelector('.entry-buttons-group').style.display = 'none';
+    showToast(`Entered ${amount} Birr. Finding players...`, 'info');
+}
+
+function claimBingoManually() {
+    if (!activeGameSession || !activeGameSession.isActive || activeGameSession.winnerDeclared) { showToast("No active game", 'error'); return; }
+    let calledSet = new Set(activeGameSession.calledNumbers);
+    if (checkBingoOnCard(playerBingoCard, calledSet)) {
+        let shouldWin = (gameNumberCounter % 5 === 1);
+        if (shouldWin) endGameWithWinner(currentUser, true);
+        else endGameWithWinner(housePlayersInGame[Math.floor(Math.random() * housePlayersInGame.length)], false);
+    } else { showToast("No Bingo yet!", 'warning'); }
+}
+
+// ==================== UI UPDATE FUNCTIONS ====================
+function updateUserUI() {
+    if (!currentUser || currentUser.isAdmin) return;
+    document.querySelectorAll('#userBalance, #gameUserBalance').forEach(el => { if (el) el.innerText = currentUser.balance || 0; });
+    document.querySelectorAll('#userNameDisplay, #gameUserNameDisplay').forEach(el => { if (el) el.innerText = currentUser.name; });
+    const streak = userStreaks[currentUser.phone] || { wins: 0, losses: 0 };
+    if (document.getElementById('winCount')) document.getElementById('winCount').innerText = streak.wins || 0;
+    if (document.getElementById('lossCount')) document.getElementById('lossCount').innerText = streak.losses || 0;
+}
+
+function updateHistoryDisplay() {
+    const historyDiv = document.getElementById('historyList');
+    if (historyDiv) {
+        historyDiv.innerHTML = gameHistory.slice(0, 8).map(h => `<div>🏆 ${h}</div>`).join('') || '<div>No recent winners</div>';
+    }
+}
+
+function hideAllPages() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('lobbyPage').classList.add('hidden');
+    document.getElementById('gamePage').classList.add('hidden');
+    document.getElementById('adminPage').classList.add('hidden');
+}
+
+function showLobby() {
+    resetGameSession();
+    hideAllPages();
+    document.getElementById('lobbyPage').classList.remove('hidden');
+    document.getElementById('waitingSection').classList.add('hidden');
+    document.querySelector('.entry-buttons-group').style.display = 'flex';
+    updateUserUI();
+    updateHistoryDisplay();
+}
+
+function showProfilePopup() {
+    showToast(`${currentUser?.name}\nBalance: ${currentUser?.balance} Birr\nStatus: ${currentUser?.approved ? 'Approved' : 'Pending'}`, 'info');
+}
+
+// ==================== ADMIN FUNCTIONS ====================
+async function showAdminDashboard() {
+    hideAllPages();
+    document.getElementById('adminPage').classList.remove('hidden');
+    
+    const totalUsers = casinoUsers.length;
+    const totalBalance = casinoUsers.reduce((s, u) => s + (u.balance || 0), 0);
+    const pendingUsers = casinoUsers.filter(u => !u.approved).length;
+    const pendingWithdrawalsCount = pendingWithdrawals.length;
+    
+    const main = document.getElementById('adminMainContent');
+    if (main) {
+        main.innerHTML = `
+            <div class="dashboard-cards">
+                <div class="card"><div class="card-value">${totalUsers}</div><div>Total Users</div></div>
+                <div class="card"><div class="card-value">${totalBalance}</div><div>Total Balance</div></div>
+                <div class="card"><div class="card-value">${pendingUsers}</div><div>Pending Users</div></div>
+                <div class="card"><div class="card-value">${pendingWithdrawalsCount}</div><div>Pending Withdrawals</div></div>
+            </div>
+            <h3 style="color:var(--accent); margin-top:20px;">⏳ Pending Users</h3>
+            ${casinoUsers.filter(u => !u.approved).map(u => `
+                <div class="card" style="margin-bottom:10px;">
+                    <div><strong>${u.name}</strong> | ${u.phone}</div>
+                    <button onclick="approveUser('${u.phone}')">Approve</button>
+                </div>
+            `).join('') || '<p>No pending users</p>'}
+            <h3 style="color:var(--accent); margin-top:20px;">💸 Pending Withdrawals</h3>
+            ${pendingWithdrawals.map((w, i) => `
+                <div class="card" style="margin-bottom:10px;">
+                    <div><strong>${w.name}</strong> | ${w.amount} Birr</div>
+                    <button onclick="approveWithdraw(${i})">Approve</button>
+                </div>
+            `).join('') || '<p>No pending withdrawals</p>'}
+            <h3 style="color:var(--accent); margin-top:20px;">💰 Add Funds</h3>
+            <input id="fundsPhone" placeholder="Phone Number">
+            <input id="fundsAmount" placeholder="Amount" type="number">
+            <button onclick="adminAddFunds()">Add Funds</button>
+        `;
+    }
+}
+
+window.approveUser = (phone) => {
+    let u = casinoUsers.find(u => u.phone === phone);
+    if (u) {
+        u.approved = true;
+        saveLocalData();
+        saveUserToPocketBase(u);
+        showAdminDashboard();
+        showToast("User approved!", 'success');
+    }
+};
+
+window.approveWithdraw = (idx) => {
+    pendingWithdrawals.splice(idx, 1);
+    saveLocalData();
+    showAdminDashboard();
+    showToast("Withdrawal approved!", 'success');
+};
+
+window.adminAddFunds = () => {
+    const phone = document.getElementById('fundsPhone')?.value;
+    const amount = parseInt(document.getElementById('fundsAmount')?.value);
+    let u = casinoUsers.find(u => u.phone === phone);
+    if (u && amount > 0) {
+        u.balance = (u.balance || 0) + amount;
+        saveLocalData();
+        saveUserToPocketBase(u);
+        showToast(`Added ${amount} Birr to ${u.name}`, 'success');
+        showAdminDashboard();
+    } else {
+        showToast("User not found or invalid amount", 'error');
+    }
+};
+
+function renderAdminContent(section) {
+    if (section === 'dashboard') showAdminDashboard();
+}
+
+// ==================== AUTHENTICATION ====================
+async function handleLogin() {
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const pwd = document.getElementById('password').value.trim();
+    
+    if (!name || !phone || !pwd) { showToast("All fields required", 'error'); return; }
+    
+    // Admin login
+    if (name === ADMIN_CRED.name && phone === ADMIN_CRED.phone && pwd === ADMIN_CRED.password) {
+        currentUser = { name, phone, isAdmin: true };
+        showAdminDashboard();
+        return;
+    }
+    
+    // Check existing user
+    let user = casinoUsers.find(u => u.phone === phone && u.password === pwd);
+    
+    if (user) {
+        if (user.blocked) { showToast("Account blocked", 'error'); return; }
+        currentUser = user;
+        showLobby();
+        updateUserUI();
+        showToast(`Welcome ${user.name}`, 'success');
+    } else {
+        // Register new user
+        let newUser = {
+            id: Date.now(),
+            name: name,
+            phone: phone,
+            password: pwd,
+            balance: 0,
+            wins: 0,
+            losses: 0,
+            approved: false,
+            blocked: false
+        };
+        casinoUsers.push(newUser);
+        currentUser = newUser;
+        saveLocalData();
+        saveUserToPocketBase(newUser);
+        showLobby();
+        updateUserUI();
+        showToast("Registered! Wait admin approval.", 'info');
+    }
+}
+
+function handleLogout() {
+    currentUser = null;
+    resetGameSession();
+    hideAllPages();
+    document.getElementById('loginPage').classList.remove('hidden');
+    showToast("Logged out", 'info');
+}
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load data from PocketBase
+    await loadDataFromPocketBase();
+    
+    // Load local data as fallback
+    const savedUsers = localStorage.getItem('casinoUsers');
+    if (savedUsers && casinoUsers.length === 0) casinoUsers = JSON.parse(savedUsers);
+    const savedWithdrawals = localStorage.getItem('pendingWithdrawals');
+    if (savedWithdrawals) pendingWithdrawals = JSON.parse(savedWithdrawals);
+    const savedStreaks = localStorage.getItem('userStreaks');
+    if (savedStreaks) userStreaks = JSON.parse(savedStreaks);
+    const savedHistory = localStorage.getItem('gameHistory');
+    if (savedHistory) gameHistory = JSON.parse(savedHistory);
+    
+    // Event Listeners
+    document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
+    document.querySelectorAll('.entry-button').forEach(btn => btn.addEventListener('click', () => handleEntry(parseInt(btn.dataset.entry))));
+    document.getElementById('depositBtn')?.addEventListener('click', showDepositPopup);
+    document.getElementById('withdrawBtnLobby')?.addEventListener('click', showWithdrawPopup);
+    document.getElementById('supportBtn')?.addEventListener('click', showSupportPopup);
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+    document.getElementById('cancelGameBtn')?.addEventListener('click', cancelWaiting);
+    document.getElementById('checkBingoBtn')?.addEventListener('click', claimBingoManually);
+    document.getElementById('backToLobbyGameBtn')?.addEventListener('click', showLobby);
+    document.getElementById('adminLogoutBtn')?.addEventListener('click', () => { currentUser = null; hideAllPages(); document.getElementById('loginPage').classList.remove('hidden'); });
+    document.querySelectorAll('.nav-item').forEach(el => { if (el.dataset?.section) el.addEventListener('click', () => renderAdminContent(el.dataset.section)); });
+    document.getElementById('profileBtn')?.addEventListener('click', showProfilePopup);
+    document.getElementById('gameProfileBtn')?.addEventListener('click', showProfilePopup);
+    document.getElementById('gameDepositBtn')?.addEventListener('click', showDepositPopup);
+    
+    // Check for saved user session
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        try {
+            const u = JSON.parse(savedUser);
+            if (u && !u.isAdmin) {
+                currentUser = u;
+                showLobby();
+                updateUserUI();
+            }
+        } catch(e) {}
+    }
+});
