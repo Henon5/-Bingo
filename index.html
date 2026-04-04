@@ -3,64 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>ሐበሻ Casino | Real-Time Bingo</title>
+    <title>ሐበሻ Casino | Bingo Game</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Celebration Container -->
     <div id="celebration"></div>
+    
+    <!-- Popup Container -->
     <div id="popupContainer"></div>
-    <div class="server-status" id="serverStatus">🔄 Game Ready - Local Mode</div>
+    
+    <!-- Status Bar -->
+    <div class="server-status" id="serverStatus">🎮 Game Ready</div>
 
-    <!-- LOGIN PAGE -->
+    <!-- ==================== LOGIN PAGE ==================== -->
     <div id="loginPage">
-        <div class="logo" style="font-size: 2rem; text-align: center; margin: 20px 0;">ሐበሻ Casino</div>
+        <div class="logo">ሐበሻ Casino</div>
         <div class="glass-card login-box">
-            <h2 style="color: var(--accent); text-align: center; margin-bottom: 20px;">Login / Register</h2>
+            <h2>Login / Register</h2>
             <div class="input-group">
                 <label>Full Name</label>
-                <input type="text" id="name" placeholder="Your name">
+                <input type="text" id="loginName" placeholder="Your name">
             </div>
             <div class="input-group">
                 <label>Phone Number</label>
-                <input type="tel" id="phone" placeholder="09xxxxxxxx">
+                <input type="tel" id="loginPhone" placeholder="09xxxxxxxx">
             </div>
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" id="password" placeholder="******">
+                <input type="password" id="loginPassword" placeholder="******">
             </div>
-            <button id="loginBtn">Enter Casino</button>
-            <p style="font-size:11px; text-align:center; margin-top:16px; opacity:0.6;">Real-time Bingo | Local Storage</p>
+            <button id="doLoginBtn">Enter Casino</button>
+            <p class="login-note">Play Bingo & Win Big!</p>
         </div>
     </div>
 
-    <!-- LOBBY PAGE -->
+    <!-- ==================== LOBBY PAGE ==================== -->
     <div id="lobbyPage" class="hidden">
         <div class="header-bar">
             <div class="flex-row">
-                <span id="userNameDisplay" style="font-weight:bold; color:var(--accent);"></span>
-                <span class="user-balance">💰 <span id="userBalance">0</span> Birr</span>
+                <span id="lobbyUserName" class="user-name">Player</span>
+                <span class="user-balance">💰 <span id="lobbyUserBalance">0</span> Birr</span>
             </div>
-            <div class="button-group" style="margin-top: 12px;">
-                <button id="profileBtn" class="secondary small">Profile</button>
-                <button id="depositBtn" class="secondary small">Deposit</button>
-                <button id="withdrawBtnLobby" class="secondary small">Withdraw</button>
-                <button id="supportBtn" class="secondary small">Support</button>
-                <button id="logoutBtn" class="danger small">Exit</button>
+            <div class="button-group">
+                <button id="lobbyProfileBtn" class="secondary small">Profile</button>
+                <button id="lobbyDepositBtn" class="secondary small">Deposit</button>
+                <button id="lobbyWithdrawBtn" class="secondary small">Withdraw</button>
+                <button id="lobbySupportBtn" class="secondary small">Support</button>
+                <button id="lobbyLogoutBtn" class="danger small">Exit</button>
             </div>
         </div>
 
-        <div id="waitingSection" class="waiting-players">
-            <i class="fas fa-users" style="font-size: 2rem; color: var(--accent);"></i>
-            <h3 id="waitingStatus">⏳ Finding Players...</h3>
+        <!-- Waiting Section (hidden by default) -->
+        <div id="waitingSection" class="waiting-players hidden">
+            <i class="fas fa-users"></i>
+            <h3 id="waitingStatus">Finding Players...</h3>
             <div class="timer-display" id="gameTimer">--:--</div>
-            <div><span id="totalPlayersCount">0</span> Players in Lobby</div>
+            <div><span id="totalPlayersCount">0</span> Players in Game</div>
             <div class="players-list" id="activePlayersList"></div>
-            <button id="cancelGameBtn" class="danger small" style="margin-top: 12px;">Cancel Entry</button>
+            <button id="cancelGameBtn" class="danger small">Cancel Entry</button>
         </div>
 
-        <div class="entry-buttons-group">
+        <!-- Entry Buttons -->
+        <div class="entry-buttons-group" id="entryButtonsGroup">
             <button class="entry-button" data-entry="5">🎫 Entry 5 Birr</button>
             <button class="entry-button" data-entry="10">🎫 Entry 10 Birr</button>
             <button class="entry-button" data-entry="15">🎫 Entry 15 Birr</button>
@@ -68,63 +77,71 @@
             <button class="entry-button" data-entry="50">🎫 Entry 50 Birr</button>
         </div>
 
-        <div class="glass-card" style="margin-top: 16px;">
-            <h3 style="color:var(--accent);">📜 Game Rules</h3>
-            <p>✅ Min deposit: 50 Birr | Min withdrawal: 200 Birr<br>✅ 10-20 players per game | Big prize pools!<br>✅ First to complete row/column/diagonal wins!<br>✅ <span class="online-indicator"></span> Local Storage Mode</p>
+        <!-- Game Rules -->
+        <div class="glass-card rules-card">
+            <h3>📜 Game Rules</h3>
+            <p>✅ Min deposit: 50 Birr | Min withdrawal: 200 Birr</p>
+            <p>✅ 10-20 players per game | Big prize pools!</p>
+            <p>✅ First to complete row/column/diagonal wins!</p>
+            <p>✅ <span class="online-indicator"></span> Real-time Bingo Action!</p>
         </div>
     </div>
 
-    <!-- GAME PAGE -->
+    <!-- ==================== GAME PAGE ==================== -->
     <div id="gamePage" class="hidden">
         <div class="header-bar">
             <div class="flex-row">
-                <span id="gameUserNameDisplay"></span>
+                <span id="gameUserName" class="user-name">Player</span>
                 <span class="user-balance">💰 <span id="gameUserBalance">0</span> Birr</span>
             </div>
-            <button id="backToLobbyGameBtn" class="secondary small" style="margin-top: 10px;">← Exit Game</button>
+            <button id="exitGameBtn" class="secondary small">← Exit Game</button>
         </div>
 
         <div class="stats-row">
-            <div class="stat-item"><div class="stat-label">👥 Players</div><div class="stat-value" id="playerCount">0</div></div>
-            <div class="stat-item"><div class="stat-label">🎲 Entry</div><div class="stat-value" id="gameEntry">0</div></div>
-            <div class="stat-item"><div class="stat-label">🏆 Prize Pool</div><div class="stat-value" id="prizePool">0</div></div>
+            <div class="stat-item"><div class="stat-label">👥 Players</div><div class="stat-value" id="gamePlayerCount">0</div></div>
+            <div class="stat-item"><div class="stat-label">🎲 Entry</div><div class="stat-value" id="gameEntryAmount">0</div></div>
+            <div class="stat-item"><div class="stat-label">🏆 Prize Pool</div><div class="stat-value" id="gamePrizePool">0</div></div>
             <div class="stat-item"><div class="stat-label">⏱️ Time Left</div><div class="stat-value" id="gameTimeLeft">03:30</div></div>
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-            <div class="glass-card" style="flex:1; text-align:center;">
+        <div class="game-container">
+            <div class="glass-card current-number-card">
                 <h3>🎯 Current Number</h3>
                 <div class="bingo-number" id="currentNumber">--</div>
-                <div>Called: <span id="calledNumbersCount">0</span>/75</div>
+                <div>Called: <span id="calledCount">0</span>/75</div>
             </div>
-            <div class="glass-card" style="flex:2;">
-                <h3 style="text-align:center;">🎴 Your Card</h3>
-                <div class="bingo-card" id="bingoCard"></div>
-                <button id="checkBingoBtn" class="success" style="margin-top: 10px;">🏆 Claim Bingo!</button>
+            
+            <div class="glass-card bingo-card-container">
+                <h3>🎴 Your Bingo Card</h3>
+                <div class="bingo-card" id="bingoCardGrid"></div>
+                <button id="claimBingoBtn" class="success">🏆 Claim Bingo!</button>
             </div>
-            <div class="glass-card" style="flex:1;">
+            
+            <div class="glass-card history-card">
                 <h3>📋 Winners</h3>
-                <div id="historyList" style="max-height:130px; overflow-y:auto; font-size:0.75rem;"></div>
-                <div style="margin-top: 10px;">✅ Wins: <span id="winCount">0</span> | ❌ Losses: <span id="lossCount">0</span></div>
+                <div id="winnersList"></div>
+                <div class="stats-mini">✅ Wins: <span id="userWins">0</span> | ❌ Losses: <span id="userLosses">0</span></div>
             </div>
         </div>
     </div>
 
-    <!-- ADMIN PAGE -->
+    <!-- ==================== ADMIN PAGE ==================== -->
     <div id="adminPage" class="hidden">
-        <div class="admin-layout">
+        <div class="admin-container">
             <div class="admin-sidebar">
-                <h3 style="color:var(--accent);"><i class="fas fa-crown"></i> Admin Panel</h3>
-                <div class="nav-menu">
-                    <div class="nav-item active" data-section="dashboard">📊 Dashboard</div>
-                    <div class="nav-item" data-section="pendingUsers">⏳ Pending</div>
-                    <div class="nav-item" data-section="allUsers">👥 Users</div>
-                    <div class="nav-item" data-section="addFunds">💰 Add Funds</div>
-                    <div class="nav-item" data-section="withdrawals">💸 Withdrawals</div>
-                    <div class="nav-item" id="adminLogoutBtn">🚪 Exit</div>
+                <h3><i class="fas fa-crown"></i> Admin Panel</h3>
+                <div class="admin-nav">
+                    <div class="admin-nav-item active" data-tab="dashboard">📊 Dashboard</div>
+                    <div class="admin-nav-item" data-tab="pending">⏳ Pending Users</div>
+                    <div class="admin-nav-item" data-tab="users">👥 All Users</div>
+                    <div class="admin-nav-item" data-tab="funds">💰 Add Funds</div>
+                    <div class="admin-nav-item" data-tab="withdrawals">💸 Withdrawals</div>
+                    <div class="admin-nav-item" id="adminExitBtn">🚪 Exit Admin</div>
                 </div>
             </div>
-            <div class="glass-card" id="adminMainContent" style="flex:1;"></div>
+            <div class="admin-content glass-card" id="adminContent">
+                <!-- Dynamic content loaded here -->
+            </div>
         </div>
     </div>
 
