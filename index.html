@@ -4,27 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>ሐበሻ Casino | Real-Time Bingo</title>
-    <!-- Styles -->
     <link rel="stylesheet" href="style.css">
-    <!-- PocketBase SDK for Backend -->
-    <script src="https://unpkg.com/pocketbase@0.21.1/dist/pocketbase.umd.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Toast Notifications Container -->
     <div class="toast-container" id="toastContainer"></div>
-    
-    <!-- Celebration Animation Container -->
     <div id="celebration"></div>
-    
-    <!-- Popup Container -->
     <div id="popupContainer"></div>
-    
-    <!-- Server Status Bar -->
-    <div class="server-status" id="serverStatus">🔄 Loading game...</div>
+    <div class="server-status" id="serverStatus">🔄 Game Ready - Local Mode</div>
 
-    <!-- ==================== LOGIN PAGE ==================== -->
+    <!-- LOGIN PAGE -->
     <div id="loginPage">
         <div class="logo" style="font-size: 2rem; text-align: center; margin: 20px 0;">ሐበሻ Casino</div>
         <div class="glass-card login-box">
@@ -42,11 +31,11 @@
                 <input type="password" id="password" placeholder="******">
             </div>
             <button id="loginBtn">Enter Casino</button>
-            <p style="font-size:11px; text-align:center; margin-top:16px; opacity:0.6;">Real-time multiplayer Bingo | PocketBase Cloud</p>
+            <p style="font-size:11px; text-align:center; margin-top:16px; opacity:0.6;">Real-time Bingo | Local Storage</p>
         </div>
     </div>
 
-    <!-- ==================== LOBBY PAGE ==================== -->
+    <!-- LOBBY PAGE -->
     <div id="lobbyPage" class="hidden">
         <div class="header-bar">
             <div class="flex-row">
@@ -81,11 +70,11 @@
 
         <div class="glass-card" style="margin-top: 16px;">
             <h3 style="color:var(--accent);">📜 Game Rules</h3>
-            <p>✅ Min deposit: 50 Birr | Min withdrawal: 200 Birr<br>✅ 10-20 players per game | Big prize pools!<br>✅ First to complete row/column/diagonal wins!<br>✅ <span class="online-indicator"></span> Real-time PocketBase sync</p>
+            <p>✅ Min deposit: 50 Birr | Min withdrawal: 200 Birr<br>✅ 10-20 players per game | Big prize pools!<br>✅ First to complete row/column/diagonal wins!<br>✅ <span class="online-indicator"></span> Local Storage Mode</p>
         </div>
     </div>
 
-    <!-- ==================== GAME PAGE ==================== -->
+    <!-- GAME PAGE -->
     <div id="gamePage" class="hidden">
         <div class="header-bar">
             <div class="flex-row">
@@ -121,7 +110,7 @@
         </div>
     </div>
 
-    <!-- ==================== ADMIN PAGE ==================== -->
+    <!-- ADMIN PAGE -->
     <div id="adminPage" class="hidden">
         <div class="admin-layout">
             <div class="admin-sidebar">
@@ -139,7 +128,6 @@
         </div>
     </div>
 
-    <!-- Main JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
