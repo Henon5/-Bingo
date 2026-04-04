@@ -1,1 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AFRO-BINGO 🇪🇹 | Full Admin System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* ========== ORIGINAL CSS (restored) ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #009b3a 0%, #fed105 50%, #ef3340 100%);
+            min-height: 100vh; padding: 10px; color: #333; overflow-x: hidden;
+        }
+        .container {
+            max-width: 500px; margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.98);
+            border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            padding: 15px; position: relative; min-height: 550px;
+        }
+        .page { min-height: 450px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .header { 
+            background: #009b3a; color: white; padding: 15px; 
+            border-radius: 15px; margin-bottom: 15px; text-align: center;
+            position: relative;
+        }
+        .profile-mini {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #f8f9fa; padding: 10px 15px; border-radius: 12px;
+            margin-bottom: 15px; border: 1px solid #ddd;
+        }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 0.8rem; color: #666; margin-bottom: 5px; }
+        .input-group input { 
+            width: 100%; padding: 12px; border: 2px solid #ddd; 
+            border-radius: 8px; font-size: 1rem; 
+        }
+        .big-display {
+            font-size: 2.5rem; font-weight: bold; color: #2c3e50;
+            text-align: center; margin: 10px 0; height: 70px;
+            display: flex; align-items: center; justify-content: center;
+            background: #fdfdfd; border-radius: 15px; border: 3px solid #009b3a;
+        }
+        .bingo-table { width: 100%; border-collapse: separate; border-spacing: 4px; margin: 10px 0; }
+        .bingo-table th { background: #009b3a; color: white; height: 40px; border-radius: 5px; }
+        .bingo-table td {
+            height: 55px; text-align: center; font-weight: bold;
+            background: #fff; border: 1px solid #ddd; border-radius: 8px;
+            cursor: pointer; transition: 0.2s; font-size: 1.1rem;
+        }
+        .marked { background: #fed105 !important; border-color: #f39c12 !important; transform: scale(0.95); }
+        .free { background: #0039a6 !important; color: white; }
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: bold; color: white;
+            cursor: pointer; margin: 5px 0; transition: filter 0.2s;
+        }
+        .btn:active { filter: brightness(0.8); }
+        .btn-green { background: #009b3a; }
+        .btn-blue { background: #0039a6; }
+        .btn-red { background: #ef3340; }
+        .btn-purple { background: #6f42c1; }
+        .btn-outline { background: transparent; border: 2px solid #009b3a; color: #009b3a; }
+        .btn-gold { background: #f39c12; }
+        .payment-box {
+            background: #f8f9ff; border: 2px solid #0039a6; 
+            padding: 15px; border-radius: 12px; margin-bottom: 15px; 
+            text-align: center;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 15px;
+            max-width: 350px; width: 90%; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .waiting-screen { text-align: center; padding: 30px 20px; }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid #009b3a; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .notification {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333; color: white; padding: 12px 25px;
+            border-radius: 30px; transition: 0.3s; z-index: 999; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .notification.show { transform: translateX(-50%) translateY(0); }
+        .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .stat-box { background: white; border-radius: 10px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e0e0e0; }
+        .stat-box h4 { font-size: 0.8rem; color: #666; margin-bottom: 5px; text-align: center; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; text-align: center; color: #009b3a; }
+        .history-box { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; max-height: 120px; overflow-y: auto; }
+        .history-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: #333; text-align: center; }
+        .numbers-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        .number-badge { background: #009b3a; color: white; padding: 3px 8px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; min-width: 40px; text-align: center; }
+        .number-badge.recent { background: #ef3340; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .room-card { transition: transform 0.2s; background: white; border: 2px solid #ddd; border-radius: 12px; padding: 15px; margin: 10px 0; cursor: pointer; }
+        .room-card:hover { transform: translateY(-2px); }
+        .house-icon-btn {
+            background: linear-gradient(145deg, #fff8f0, #ffe6c7);
+            border: 2px solid #d4a373;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .pool-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: white;
+        }
+        .winner-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #009b3a, #fed105);
+            color: #0039a6;
+            padding: 20px 30px;
+            border-radius: 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: bounceIn 0.5s ease;
+            border: 3px solid gold;
+        }
+        @keyframes bounceIn {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .contact-info { background: #f0fdf4; border-radius: 10px; padding: 15px; margin: 15px 0; border: 2px solid #009b3a; }
+        .contact-item { display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: white; border-radius: 8px; border: 1px solid #ddd; justify-content: space-between; }
+        .admin-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        .admin-card { background: linear-gradient(135deg, #f0f9ff, #e6f3ff); border-radius: 16px; padding: 12px; text-align: center; border-left: 4px solid #009b3a; }
+        @media (max-width: 480px) { .container { padding: 10px; min-height: 500px; } .bingo-table td { height: 45px; font-size: 1rem; } }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <div id="pageContainer"></div>
+</div>
+<div id="modalContainer"></div>
+<div class="notification" id="notification"></div>
+
+<script>
+    const tg = window.Telegram?.WebApp;
+    if(tg) { tg.expand(); tg.enableClosingConfirmation(); }
+
+    const Sound = {
+        play(freq, type = 'sine', duration = 0.1) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (error) { console.log("Audio not supported:", error); }
+        },
+        click() { this.play(600, 'sine', 0.1); },
+        number() { this.play(440, 'triangle', 0.2); },
+        win() { this.play(523, 'square', 0.3); setTimeout(() => this.play(659, 'square', 0.3), 150); setTimeout(() => this.play(783, 'square', 0.5), 300); },
+        error() { this.play(150, 'sawtooth', 0.3); }
+    };
+
+    let userData = JSON.parse(localStorage.getItem('afroBingoUser')) || {
+        name: tg?.initDataUnsafe?.user?.first_name || "New Player",
+        phone: "",
+        telegram: "",
+        balance: 0,
+        selectedRoom: 20,
+        telegramId: tg?.initDataUnsafe?.user?.id || null,
+        username: tg?.initDataUnsafe?.user?.username || null,
+        totalWins: 0,
+        totalWinnings: 0,
+        gamesPlayed: 0,
+        isBlocked: false
+    };
+
+    // Room pools
+    let roomPools = JSON.parse(localStorage.getItem('bingoRoomPools')) || {
+        20: { pool: 0, players: [], houseTotal: 0 },
+        50: { pool: 0, players: [], houseTotal: 0 },
+        100: { pool: 0, players: [], houseTotal: 0 }
+    };
+    
+    // Deposit/Withdrawal requests
+    let depositRequests = JSON.parse(localStorage.getItem('depositRequests')) || [];
+    let adminLoggedIn = false;
+    let allUsers = JSON.parse(localStorage.getItem('afroBingoAllUsers')) || [];
+    
+    function syncUserToGlobal() {
+        let existingIndex = allUsers.findIndex(u => u.telegramId === userData.telegramId || (u.phone && u.phone === userData.phone && userData.phone));
+        if (existingIndex !== -1) allUsers[existingIndex] = { ...userData, lastActive: Date.now() };
+        else allUsers.push({ ...userData, lastActive: Date.now(), registeredAt: Date.now() });
+        localStorage.setItem('afroBingoAllUsers', JSON.stringify(allUsers));
+    }
+    
+    function saveData() {
+        localStorage.setItem('afroBingoUser', JSON.stringify(userData));
+        localStorage.setItem('bingoRoomPools', JSON.stringify(roomPools));
+        localStorage.setItem('depositRequests', JSON.stringify(depositRequests));
+        syncUserToGlobal();
+    }
+    syncUserToGlobal();
+
+    let currentPage = 'lobby';
+    function showPage(pageId) {
+        currentPage = pageId;
+        const pageContainer = document.getElementById('pageContainer');
+        pageContainer.innerHTML = '';
+        if (pageId === 'lobby') showLobbyPage();
+        else if (pageId === 'bingo') showBingoPage();
+        else if (pageId === 'profile') showProfilePage();
+        else if (pageId === 'deposit') showDepositPage();
+    }
+
+    // PROFILE PAGE with Telegram field
+    function showProfilePage() {
+        const pageContainer = document.getElementById('pageContainer');
+        pageContainer.innerHTML = `
+            <div class="page">
+                <div class="header">
+                    <button onclick="showPage('lobby')" style="background:none;border:none;color:white;position:absolute;left:15px;top:20px;font-size:1.2rem;cursor:pointer;">←</button>
+                    <h2>👤 My Profile</h2>
+                </div>
+                <div class="input-group"><label>Full Name</label><input type="text" id="editName" value="${userData.name}"></div>
+                <div class="input-group"><label>Phone Number (TeleBirr)</label><input type="tel" id="editPhone" value="${userData.phone || ''}"></div>
+                <div class="input-group"><label>📱 Telegram Account</label><input type="text" id="editTelegram" placeholder="@username or link" value="${userData.telegram || ''}"></div>
+                <button class="btn btn-green" onclick="saveProfile()">Save</button>
+                <button class="btn btn-outline" onclick="showPage('lobby')">Cancel</button>
+            </div>
+        `;
+    }
+    
+    function saveProfile() {
+        userData.name = document.getElementById('editName').value.trim() || "Player";
+        userData.phone = document.getElementById('editPhone').value.trim();
+        userData.telegram = document.getElementById('editTelegram').value.trim();
+        saveData();
+        showToast("Profile Updated!", "success");
+        showPage('lobby');
+    }
+
+    function showLobbyPage() {
+        if (userData.isBlocked) {
+            document.getElementById('pageContainer').innerHTML = `<div class="page" style="text-align:center; padding:50px 20px;"><span style="font-size:3rem;">🚫</span><h2>Account Blocked</h2><button class="btn btn-outline" onclick="showSupport()">Contact Support</button></div>`;
+            return;
+        }
+        const container = document.getElementById('pageContainer');
+        container.innerHTML = `
+            <div class="page">
+                <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div><h1>🎮 AFRO-BINGO 🇪🇹</h1><p>Pool Prize System</p></div>
+                    <div class="house-icon-btn" id="houseIcon">🏠</div>
+                </div>
+                <div class="profile-mini">
+                    <div><div style="font-weight:bold;">${userData.name}</div><div>💰 ${userData.balance} ETB</div></div>
+                    <button class="btn btn-outline" style="width:auto; padding:5px 15px;" onclick="showPage('profile')">Edit</button>
+                </div>
+                <div class="room-card" onclick="tryJoinRoom(100)"><div style="display:flex; justify-content:space-between;"><span><b>🔥 100 ETB Room</b><br><small>Entry: 100 ETB</small></span><span>Pool: ${roomPools[100].pool} ETB<br>👥 ${roomPools[100].players.length}</span></div></div>
+                <div class="room-card" onclick="tryJoinRoom(50)"><div style="display:flex; justify-content:space-between;"><span><b>🎯 50 ETB Room</b><br><small>Entry: 50 ETB</small></span><span>Pool: ${roomPools[50].pool} ETB<br>👥 ${roomPools[50].players.length}</span></div></div>
+                <div class="room-card" onclick="tryJoinRoom(20)"><div style="display:flex; justify-content:space-between;"><span><b>⭐ 20 ETB Room</b><br><small>Entry: 20 ETB</small></span><span>Pool: ${roomPools[20].pool} ETB<br>👥 ${roomPools[20].players.length}</span></div></div>
+                <button class="btn btn-green" onclick="showPage('deposit')">💰 DEPOSIT</button>
+                <button class="btn btn-gold" onclick="showWithdraw()">📤 WITHDRAW</button>
+                <button class="btn" onclick="showSupport()" style="background:#17a2b8;">👥 Support Team</button>
+            </div>
+        `;
+        document.getElementById('houseIcon')?.addEventListener('click', () => { Sound.click(); showAdminLogin(); });
+    }
+    
+    function tryJoinRoom(amount) {
+        if (userData.balance >= amount) {
+            joinRoom(amount);
+        } else {
+            showToast(`Insufficient balance! Need ${amount} ETB. Redirecting to deposit.`, "error");
+            showPage('deposit');
+        }
+    }
+    
+    function joinRoom(roomAmount) {
+        userData.balance -= roomAmount;
+        userData.selectedRoom = roomAmount;
+        const poolContribution = Math.floor(roomAmount * 0.85);
+        const houseContribution = roomAmount - poolContribution;
+        roomPools[roomAmount].pool += poolContribution;
+        roomPools[roomAmount].houseTotal += houseContribution;
+        if (!roomPools[roomAmount].players.includes(userData.telegramId || userData.name)) {
+            roomPools[roomAmount].players.push(userData.telegramId || userData.name);
+        }
+        saveData();
+        showToast(`Joined ${roomAmount} ETB room! Entry deducted.`, "success");
+        showPage('bingo');
+    }
+    
+    function showDepositPage() {
+        const container = document.getElementById('pageContainer');
+        container.innerHTML = `
+            <div class="page">
+                <div class="header">
+                    <button onclick="showPage('lobby')" style="background:none;border:none;color:white;position:absolute;left:15px;top:20px;font-size:1.2rem;">←</button>
+                    <h2>💰 Deposit Funds</h2>
+                </div>
+                <div class="payment-box"><div style="font-weight:bold;">📱 TeleBirr</div><div style="font-size:1.3rem;">0921302111</div><button class="btn btn-blue" onclick="copyText('0921302111')">Copy Number</button></div>
+                <div class="payment-box"><div style="font-weight:bold;">🏦 CBE Bank</div><div style="font-size:1.3rem;">1000318833625</div><button class="btn btn-green" onclick="copyText('1000318833625')">Copy Account</button></div>
+                <div class="input-group"><label>Amount (ETB)</label><input type="number" id="depositAmount" placeholder="Enter amount"></div>
+                <button class="btn btn-green" onclick="requestDeposit()">✅ Request Deposit</button>
+                <button class="btn btn-outline" onclick="showPage('lobby')">Back</button>
+            </div>
+        `;
+    }
+    
+    function requestDeposit() {
+        const amount = parseInt(document.getElementById('depositAmount')?.value);
+        if (!amount || amount < 20) { showToast("Minimum deposit 20 ETB", "error"); return; }
+        depositRequests.push({
+            type: 'deposit',
+            userId: userData.telegramId || userData.phone,
+            name: userData.name,
+            phone: userData.phone || "Not provided",
+            amount: amount,
+            timestamp: Date.now(),
+            status: 'pending'
+        });
+        localStorage.setItem('depositRequests', JSON.stringify(depositRequests));
+        showToast("Deposit request sent! Wait for admin approval.", "success");
+        showWaitingForApproval(amount);
+    }
+    
+    function showWaitingForApproval(amount) {
+        const container = document.getElementById('pageContainer');
+        container.innerHTML = `
+            <div class="page waiting-screen">
+                <div class="header"><h3>⏳ Pending Approval</h3></div>
+                <div class="spinner"></div>
+                <p>Requested: ${amount} ETB</p>
+                <p>Admin will verify your payment and add funds.</p>
+                <button class="btn btn-blue" id="checkApprovalBtn">🔄 Check Status</button>
+                <button class="btn btn-outline" onclick="showPage('lobby')">Back to Lobby</button>
+            </div>
+        `;
+        document.getElementById('checkApprovalBtn')?.addEventListener('click', () => {
+            const updated = JSON.parse(localStorage.getItem('depositRequests')) || [];
+            const approved = updated.find(r => r.userId === (userData.telegramId || userData.phone) && r.type === 'deposit' && r.status === 'approved');
+            if (approved) {
+                userData.balance += approved.amount;
+                saveData();
+                showToast(`Deposit of ${approved.amount} ETB approved!`, "success");
+                showPage('lobby');
+            } else {
+                showToast("Still pending admin approval...", "error");
+            }
+        });
+    }
+    
+    function showWithdraw() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>💰 Withdrawal Request</h3>
+                <div class="contact-info"><div class="contact-item">📱 0921302111 <button onclick="copyText('0921302111')">Copy</button></div><div class="contact-item">📨 @rasenok <button onclick="copyText('@rasenok')">Copy</button></div></div>
+                <div class="input-group"><label>Amount (ETB)</label><input type="number" id="wdAmount" placeholder="Min 10 ETB"></div>
+                <div class="input-group"><label>Your Phone</label><input type="tel" id="wdPhone" value="${userData.phone || ''}"></div>
+                <button class="btn btn-gold" id="submitWdBtn">Submit Request</button>
+                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        document.getElementById('submitWdBtn')?.addEventListener('click', () => {
+            const amt = parseInt(document.getElementById('wdAmount').value);
+            const phone = document.getElementById('wdPhone').value;
+            if (!amt || amt < 10) { showToast("Invalid amount", "error"); return; }
+            if (amt > userData.balance) { showToast("Insufficient balance", "error"); return; }
+            if (!phone) { showToast("Phone required", "error"); return; }
+            depositRequests.push({ type: 'withdrawal', userId: userData.telegramId, name: userData.name, phone, amount: amt, timestamp: Date.now(), status: 'pending' });
+            localStorage.setItem('depositRequests', JSON.stringify(depositRequests));
+            showToast("Withdrawal request sent! Admin will review.", "success");
+            modal.remove();
+        });
+    }
+    
+    function showSupport() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `<div class="modal-content"><h3>👥 Support</h3><div class="contact-info"><div class="contact-item">📱 +251921302111 <button onclick="copyText('+251921302111')">Copy</button></div><div class="contact-item">📨 @rasenok <button onclick="copyText('@rasenok')">Copy</button></div></div><button class="btn btn-green" onclick="this.closest('.modal-overlay').remove()">Close</button><a href="https://t.me/rasenok" target="_blank"><button class="btn btn-blue">Open Telegram</button></a></div>`;
+        document.body.appendChild(modal);
+    }
+    
+    function copyText(txt) { navigator.clipboard.writeText(txt).then(() => showToast("Copied!", "success")); }
+    
+    // ========== ENHANCED ADMIN PANEL ==========
+    function showAdminLogin() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `<div class="modal-content"><h3>Admin Access</h3><div class="input-group"><label>Master ID</label><input type="text" id="adminUser"></div><div class="input-group"><label>Contact Code</label><input type="tel" id="adminPhone"></div><div class="input-group"><label>Security Key</label><input type="password" id="adminPass"></div><button class="btn btn-blue" id="adminLoginBtn">Login</button><button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button></div>`;
+        document.body.appendChild(modal);
+        document.getElementById('adminLoginBtn').onclick = () => {
+            if (document.getElementById('adminUser').value === 'MasterAdmin' && document.getElementById('adminPhone').value === 'SECURE123' && document.getElementById('adminPass').value === 'GOLDENKEY') {
+                modal.remove();
+                showFullAdminPanel();
+            } else { showToast("Invalid credentials", "error"); }
+        };
+    }
+    
+    function showFullAdminPanel() {
+        // Refresh data
+        allUsers = JSON.parse(localStorage.getItem('afroBingoAllUsers')) || [];
+        depositRequests = JSON.parse(localStorage.getItem('depositRequests')) || [];
+        const totalUserMoney = allUsers.reduce((sum, u) => sum + (u.balance || 0), 0);
+        const pendingDeposits = depositRequests.filter(r => r.type === 'deposit' && r.status === 'pending');
+        const pendingWithdrawals = depositRequests.filter(r => r.type === 'withdrawal' && r.status === 'pending');
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:550px; max-height:85vh; overflow-y:auto;">
+                <h3 style="color:#009b3a;">🛡️ Admin Control Panel</h3>
+                <div class="admin-stats-grid">
+                    <div class="admin-card">👥 Users: ${allUsers.length}</div>
+                    <div class="admin-card">💰 Total Money: ${totalUserMoney} ETB</div>
+                    <div class="admin-card">📥 Pending Deposits: ${pendingDeposits.length}</div>
+                    <div class="admin-card">📤 Pending Withdrawals: ${pendingWithdrawals.length}</div>
+                </div>
+                
+                <div style="margin:10px 0;"><button class="btn btn-green" id="addFundsBtn">➕ Add Funds (by Phone)</button></div>
+                <div style="margin:10px 0;"><button class="btn btn-purple" id="blockUserBtn">🚫 Block/Unblock User</button></div>
+                <div style="margin:10px 0;"><button class="btn btn-blue" id="approveDepositsBtn">✅ Approve Deposits</button></div>
+                <div style="margin:10px 0;"><button class="btn btn-gold" id="viewWithdrawalsBtn">📤 View Withdrawal Requests</button></div>
+                <div style="margin:10px 0;"><button class="btn btn-red" id="resetPoolsBtn">🔄 Reset All Pools</button></div>
+                
+                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add Funds by Phone
+        document.getElementById('addFundsBtn')?.addEventListener('click', () => {
+            const phone = prompt("Enter user's phone number:");
+            if (!phone) return;
+            const user = allUsers.find(u => u.phone === phone);
+            if (!user) { showToast("User not found!", "error"); return; }
+            const amount = parseInt(prompt(`Enter amount to add to ${user.name}:`, "100"));
+            if (!amount || amount <= 0) return;
+            user.balance += amount;
+            if (userData.phone === phone) userData.balance += amount;
+            saveData();
+            showToast(`Added ${amount} ETB to ${user.name}`, "success");
+            modal.remove();
+            showFullAdminPanel();
+        });
+        
+        // Block/Unblock User
+        document.getElementById('blockUserBtn')?.addEventListener('click', () => {
+            const phone = prompt("Enter user's phone number to block/unblock:");
+            if (!phone) return;
+            const user = allUsers.find(u => u.phone === phone);
+            if (!user) { showToast("User not found!", "error"); return; }
+            user.isBlocked = !user.isBlocked;
+            if (userData.phone === phone) userData.isBlocked = user.isBlocked;
+            saveData();
+            showToast(`${user.name} ${user.isBlocked ? 'blocked' : 'unblocked'}`, "success");
+            modal.remove();
+            showFullAdminPanel();
+        });
+        
+        // Approve Deposits (list pending deposits)
+        document.getElementById('approveDepositsBtn')?.addEventListener('click', () => {
+            const pending = depositRequests.filter(r => r.type === 'deposit' && r.status === 'pending');
+            if (pending.length === 0) { showToast("No pending deposits", "success"); return; }
+            let message = "📋 Pending Deposits:\n\n";
+            pending.forEach((req, i) => {
+                message += `${i+1}. ${req.name} | ${req.phone} | ${req.amount} ETB\n`;
+            });
+            const idx = prompt(message + "\n\nEnter number to approve (or Cancel):");
+            if (idx && !isNaN(idx) && idx >= 1 && idx <= pending.length) {
+                const req = pending[idx-1];
+                const original = depositRequests.find(r => r.timestamp === req.timestamp && r.userId === req.userId);
+                if (original) {
+                    const targetUser = allUsers.find(u => u.phone === req.phone || u.telegramId === req.userId);
+                    if (targetUser) targetUser.balance += req.amount;
+                    if (userData.phone === req.phone) userData.balance += req.amount;
+                    original.status = 'approved';
+                    localStorage.setItem('depositRequests', JSON.stringify(depositRequests));
+                    saveData();
+                    showToast(`Deposit of ${req.amount} ETB approved for ${req.name}`, "success");
+                    modal.remove();
+                    showFullAdminPanel();
+                }
+            }
+        });
+        
+        // View Withdrawal Requests
+        document.getElementById('viewWithdrawalsBtn')?.addEventListener('click', () => {
+            const pending = depositRequests.filter(r => r.type === 'withdrawal' && r.status === 'pending');
+            if (pending.length === 0) { showToast("No pending withdrawals", "success"); return; }
+            let message = "📤 Withdrawal Requests:\n\n";
+            pending.forEach((req, i) => {
+                message += `${i+1}. ${req.name} | ${req.phone} | ${req.amount} ETB\n`;
+            });
+            const idx = prompt(message + "\n\nEnter number to approve (or Cancel):");
+            if (idx && !isNaN(idx) && idx >= 1 && idx <= pending.length) {
+                const req = pending[idx-1];
+                const original = depositRequests.find(r => r.timestamp === req.timestamp && r.userId === req.userId);
+                if (original) {
+                    const targetUser = allUsers.find(u => u.phone === req.phone || u.telegramId === req.userId);
+                    if (targetUser && targetUser.balance >= req.amount) {
+                        targetUser.balance -= req.amount;
+                        if (userData.phone === req.phone && userData.balance >= req.amount) userData.balance -= req.amount;
+                        original.status = 'approved';
+                        localStorage.setItem('depositRequests', JSON.stringify(depositRequests));
+                        saveData();
+                        showToast(`Withdrawal of ${req.amount} ETB approved for ${req.name}`, "success");
+                    } else {
+                        showToast(`Insufficient balance for ${req.name}`, "error");
+                    }
+                    modal.remove();
+                    showFullAdminPanel();
+                }
+            }
+        });
+        
+        document.getElementById('resetPoolsBtn')?.addEventListener('click', () => {
+            if (confirm("Reset all room pools? This will delete current prize pools.")) {
+                roomPools = { 20: { pool: 0, players: [], houseTotal: 0 }, 50: { pool: 0, players: [], houseTotal: 0 }, 100: { pool: 0, players: [], houseTotal: 0 } };
+                localStorage.setItem('bingoRoomPools', JSON.stringify(roomPools));
+                showToast("Pools reset", "success");
+                modal.remove();
+            }
+        });
+    }
+    
+    // GAME SECTION (unchanged, auto-play with pool system)
+    let game = { cardGrid: [], markedState: [], calledNumbers: [], autoInterval: null, isAutoPlaying: false, isGameActive: false, currentNumbers: [] };
+    
+    function startNewGame() {
+        if (userData.isBlocked) { showToast("Blocked", "error"); showPage('lobby'); return; }
+        game.isGameActive = true;
+        if (game.autoInterval) clearInterval(game.autoInterval);
+        game.calledNumbers = [];
+        game.currentNumbers = [];
+        game.cardGrid = [];
+        game.markedState = [];
+        if(document.getElementById('callCount')) document.getElementById('callCount').textContent = "0";
+        if(document.getElementById('currentNumberDisplay')) document.getElementById('currentNumberDisplay').textContent = "Ready";
+        if(document.getElementById('matchesCount')) document.getElementById('matchesCount').textContent = "0";
+        updateNumbersHistory();
+        for(let r=0;r<5;r++) { game.cardGrid[r]=[]; game.markedState[r]=[]; }
+        ['B','I','N','G','O'].forEach((_,col) => {
+            const min = col*15+1;
+            let nums=[];
+            while(nums.length<5) { let n=Math.floor(Math.random()*15)+min; if(!nums.includes(n)) nums.push(n); }
+            nums.sort((a,b)=>a-b);
+            for(let r=0;r<5;r++) { game.cardGrid[r][col]=nums[r]; game.markedState[r][col]=false; }
+        });
+        game.markedState[2][2]=true;
+        renderCard();
+        startAutoPlay();
+    }
+    
+    function renderCard() {
+        const table = document.getElementById('bingoCard');
+        if(!table) return;
+        table.innerHTML = '';
+        const thr = table.insertRow();
+        ['B','I','N','G','O'].forEach(l=>{let th=document.createElement('th'); th.textContent=l; thr.appendChild(th);});
+        for(let r=0;r<5;r++) {
+            const row = table.insertRow();
+            for(let c=0;c<5;c++) {
+                const cell = row.insertCell();
+                if(r===2 && c===2) { cell.textContent="FREE"; cell.className="free marked";}
+                else { cell.textContent=game.cardGrid[r][c]; cell.dataset.num=game.cardGrid[r][c]; cell.onclick=()=>manualMark(cell,r,c);}
+            }
+        }
+    }
+    
+    function manualMark(cell,r,c) { if(!game.isGameActive){showToast("Game inactive","error");return;} const num=parseInt(cell.dataset.num); if(game.calledNumbers.includes(num)){ Sound.click(); cell.classList.toggle('marked'); game.markedState[r][c]=cell.classList.contains('marked'); updateMatchesCount();} else showToast("Number not called!","error");}
+    function updateMatchesCount(){ let count=0; for(let r=0;r<5;r++)for(let c=0;c<5;c++)if(game.markedState[r][c])count++; document.getElementById('matchesCount') && (document.getElementById('matchesCount').textContent=Math.max(0,count-1));}
+    function updateNumbersHistory(){ const hist=document.getElementById('numbersHistory'); if(!hist)return; hist.innerHTML=''; const recent=[...game.currentNumbers].reverse().slice(0,10); if(recent.length===0){hist.innerHTML='<div style="color:#666;text-align:center;">No numbers yet</div>';return;} recent.forEach((num,idx)=>{const badge=document.createElement('div'); badge.className='number-badge'; if(idx===0)badge.classList.add('recent'); const letter=['B','I','N','G','O'][Math.floor((num-1)/15)]; badge.textContent=`${letter}-${num}`; hist.appendChild(badge);});}
+    function startAutoPlay(){ game.isAutoPlaying=true; callNumber(); game.autoInterval=setInterval(callNumber,3000);}
+    function stopAutoPlay(){ game.isAutoPlaying=false; clearInterval(game.autoInterval);}
+    
+    function callNumber(){
+        if(game.calledNumbers.length >= 75){ stopAutoPlay(); return; }
+        let num;
+        do{ num=Math.floor(Math.random()*75)+1;}while(game.calledNumbers.includes(num));
+        game.calledNumbers.push(num);
+        game.currentNumbers.push(num);
+        Sound.number();
+        const letter=['B','I','N','G','O'][Math.floor((num-1)/15)];
+        const display=document.getElementById('currentNumberDisplay');
+        if(display)display.textContent=`${letter}-${num}`;
+        const countSpan=document.getElementById('callCount');
+        if(countSpan)countSpan.textContent=game.calledNumbers.length;
+        const cell=document.querySelector(`td[data-num="${num}"]`);
+        if(cell){cell.style.boxShadow="inset 0 0 10px #009b3a"; setTimeout(()=>{if(cell)cell.style.boxShadow="";},1000);}
+        updateNumbersHistory();
+        checkForBingo();
+    }
+    
+    function checkForBingo(){
+        let won = false;
+        for(let i=0;i<5;i++) if(game.markedState[i].every(v=>v)) won=true;
+        for(let i=0;i<5;i++){let colComp=true; for(let j=0;j<5;j++) if(!game.markedState[j][i]) colComp=false; if(colComp) won=true;}
+        let d1=true,d2=true;
+        for(let i=0;i<5;i++){ if(!game.markedState[i][i]) d1=false; if(!game.markedState[i][4-i]) d2=false;}
+        if(d1||d2) won=true;
+        
+        if(won){
+            stopAutoPlay();
+            Sound.win();
+            confetti({particleCount:200, spread:100, origin:{y:0.6}});
+            const roomAmount = userData.selectedRoom;
+            const winnings = roomPools[roomAmount].pool;
+            roomPools[roomAmount].pool = 0;
+            roomPools[roomAmount].players = [];
+            userData.balance += winnings;
+            userData.totalWins++;
+            userData.totalWinnings += winnings;
+            userData.gamesPlayed++;
+            saveData();
+            
+            const winnerDiv = document.createElement('div');
+            winnerDiv.className = 'winner-announcement';
+            winnerDiv.innerHTML = `🎉 BINGO! 🎉<br><strong style="font-size:1.8rem;">${userData.name}</strong><br>Won ${winnings} ETB from pool!`;
+            document.body.appendChild(winnerDiv);
+            setTimeout(() => {
+                winnerDiv.remove();
+                showToast(`${userData.name} won ${winnings} ETB!`, "success");
+                showPage('lobby');
+            }, 4000);
+        }
+    }
+    
+    function showBingoPage() {
+        if (userData.isBlocked) { showToast("Blocked", "error"); showPage('lobby'); return; }
+        const roomAmount = userData.selectedRoom;
+        const currentPool = roomPools[roomAmount].pool;
+        const playersCount = roomPools[roomAmount].players.length;
+        const container = document.getElementById('pageContainer');
+        container.innerHTML = `
+            <div class="page">
+                <div class="header">
+                    <button onclick="exitGame()" style="background:none;border:none;color:white;position:absolute;left:15px;top:20px;font-size:1.2rem;">←</button>
+                    <h3>AFRO-BINGO</h3>
+                    <p>Room: ${roomAmount} ETB</p>
+                </div>
+                <div class="pool-box"><h4>🎰 CURRENT PRIZE POOL</h4><div class="pool-amount">${currentPool} ETB</div><div class="players-count">👥 Players: ${playersCount}</div><div style="font-size:0.7rem;">🏠 House takes 15% per entry</div></div>
+                <div class="stats-container"><div class="stat-box"><h4>🎯 Matches</h4><div id="matchesCount">0</div></div><div class="stat-box"><h4>🏆 Wins</h4><div id="totalWins">${userData.totalWins}</div></div></div>
+                <div class="history-box"><div class="history-title">📜 Called Numbers</div><div class="numbers-list" id="numbersHistory"></div></div>
+                <div class="big-display" id="currentNumberDisplay">Ready</div>
+                <table class="bingo-table" id="bingoCard"></table>
+                <button class="btn btn-red" onclick="checkForBingo()">🏆 CLAIM BINGO!</button>
+                <button class="btn btn-outline" onclick="exitGame()">Exit Game</button>
+            </div>
+        `;
+        startNewGame();
+    }
+    
+    function exitGame(){ stopAutoPlay(); game.isGameActive=false; showPage('lobby');}
+    
+    function showToast(msg,type) { const n=document.getElementById('notification'); if(!n)return; n.textContent=msg; n.style.background=type==='success'?'#009b3a':'#333'; n.classList.add('show'); setTimeout(()=>n.classList.remove('show'),3000);}
+    
+    window.showPage = showPage; window.tryJoinRoom = tryJoinRoom; window.exitGame = exitGame; window.showSupport = showSupport; window.copyText = copyText; window.showWithdraw = showWithdraw; window.saveProfile = saveProfile; window.checkForBingo = checkForBingo; window.requestDeposit = requestDeposit;
+    window.onload = () => { showPage('lobby'); };
+</script>
+</body>
+</html>
