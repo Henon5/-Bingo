@@ -2,53 +2,120 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>ሐበሻ Casino | Bingo Game</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ALL YOUR CSS HERE (copy from style.css) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --accent: #f8c555;
+            --success: #2a9d8f;
+            --danger: #e63946;
+        }
+        body {
+            background: radial-gradient(circle at top, #1a1e3a 0%, #0a0c18 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .hidden { display: none !important; }
+        .toast-container { position: fixed; top: 10px; left: 10px; right: 10px; z-index: 10001; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: rgba(0,0,0,0.92); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 16px; transform: translateX(-100%); opacity: 0; transition: all 0.3s ease; font-size: 0.85rem; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 20px; }
+        .login-box { max-width: 380px; margin: 0 auto; }
+        .logo { font-size: 2rem; text-align: center; margin: 20px 0; color: var(--accent); }
+        .input-group { margin-bottom: 18px; }
+        .input-group label { display: block; margin-bottom: 8px; color: var(--accent); font-size: 0.85rem; }
+        input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 16px; color: white; font-size: 1rem; }
+        button { background: linear-gradient(135deg, #f8c555, #ffda88); color: #1a1e3a; border: none; padding: 14px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1rem; width: 100%; max-width: 280px; transition: transform 0.1s; }
+        button:active { transform: scale(0.97); }
+        button.secondary { background: rgba(255,255,255,0.18); color: white; }
+        button.danger { background: linear-gradient(135deg, #e63946, #ff6b81); color: white; }
+        button.small { padding: 8px 14px; font-size: 0.8rem; max-width: 100px; }
+        .user-balance { background: rgba(248,197,85,0.2); border-radius: 40px; padding: 8px 18px; font-weight: bold; color: var(--accent); display: inline-block; }
+        .header-bar { background: var(--glass-bg); backdrop-filter: blur(16px); border-radius: 20px; padding: 15px; margin-bottom: 16px; }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .entry-buttons-group { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 20px 0; }
+        .entry-button { width: 90%; max-width: 260px; padding: 16px; font-size: 1.1rem; }
+        .waiting-players { background: linear-gradient(135deg, rgba(248,197,85,0.15), rgba(0,0,0,0.5)); border-radius: 24px; padding: 24px; text-align: center; margin: 16px 0; border: 2px solid var(--accent); }
+        .timer-display { font-size: 2.2rem; font-weight: bold; color: var(--accent); margin: 12px 0; }
+        .players-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0; max-height: 200px; overflow-y: auto; }
+        .player-badge { background: rgba(255,255,255,0.15); border-radius: 40px; padding: 8px 16px; font-size: 0.85rem; }
+        .stats-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0; }
+        .stat-item { background: var(--glass-bg); border-radius: 16px; padding: 10px 14px; text-align: center; flex: 1; min-width: 70px; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+        .game-container { display: flex; flex-wrap: wrap; gap: 16px; }
+        .game-container > div { flex: 1; min-width: 250px; }
+        .bingo-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 15px auto; max-width: 320px; }
+        .bingo-cell { aspect-ratio: 1; background: rgba(255,255,255,0.12); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); }
+        .bingo-cell.called { background: #4cc9f0; color: #1a1e3a; }
+        .bingo-cell.free { background: #2a9d8f; color: white; }
+        .bingo-number { font-size: 3rem; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        .winner-announcement { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #f72585, #9d4edd); padding: 28px 24px; border-radius: 32px; text-align: center; z-index: 10000; width: 85%; max-width: 320px; animation: bounceIn 0.4s ease; }
+        @keyframes bounceIn { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        .online-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--success); margin-right: 6px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .celebration { position: fixed; pointer-events: none; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; }
+        .confetti { position: absolute; width: 8px; height: 8px; animation: fall 2s linear forwards; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+        .popup-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 10002; padding: 20px; }
+        .popup-modal { background: linear-gradient(135deg, #1f2347, #0f1225); border-radius: 28px; max-width: 400px; width: 100%; padding: 24px; border: 1px solid rgba(248, 197, 85, 0.3); animation: modalSlideIn 0.3s ease; }
+        @keyframes modalSlideIn { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; }
+        .popup-title { color: var(--accent); font-size: 1.3rem; font-weight: bold; }
+        .close-popup { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0 8px; }
+        .account-info-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 16px; margin: 16px 0; }
+        .account-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .copy-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; cursor: pointer; margin-left: 10px; }
+        .admin-container { display: flex; flex-direction: column; gap: 16px; }
+        @media (min-width: 768px) { .admin-container { flex-direction: row; } }
+        .admin-sidebar { background: rgba(0,0,0,0.5); border-radius: 24px; padding: 20px; min-width: 200px; }
+        .admin-sidebar h3 { color: var(--accent); margin-bottom: 16px; }
+        .admin-nav-item { padding: 12px 16px; margin: 5px 0; border-radius: 40px; cursor: pointer; background: rgba(255,255,255,0.05); transition: all 0.2s; }
+        .admin-nav-item:hover, .admin-nav-item.active { background: rgba(248,197,85,0.2); color: var(--accent); }
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; text-align: center; }
+        .card-value { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+        .server-status { position: fixed; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; text-align: center; z-index: 9998; }
+        .rules-card { margin-top: 16px; }
+        .rules-card h3 { color: var(--accent); margin-bottom: 10px; }
+        .rules-card p { font-size: 0.8rem; margin: 5px 0; }
+        .current-number-card, .bingo-card-container, .history-card { text-align: center; }
+        #winnersList div { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; }
+        .stats-mini { margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
+    </style>
 </head>
 <body>
-    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
-    
-    <!-- Celebration Container -->
     <div id="celebration"></div>
-    
-    <!-- Popup Container -->
     <div id="popupContainer"></div>
-    
-    <!-- Status Bar -->
     <div class="server-status" id="serverStatus">🎮 Game Ready</div>
 
-    <!-- ==================== LOGIN PAGE ==================== -->
+    <!-- LOGIN PAGE -->
     <div id="loginPage">
         <div class="logo">ሐበሻ Casino</div>
         <div class="glass-card login-box">
-            <h2>Login / Register</h2>
-            <div class="input-group">
-                <label>Full Name</label>
-                <input type="text" id="loginName" placeholder="Your name">
-            </div>
-            <div class="input-group">
-                <label>Phone Number</label>
-                <input type="tel" id="loginPhone" placeholder="09xxxxxxxx">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="loginPassword" placeholder="******">
-            </div>
+            <h2 style="color: var(--accent); text-align: center; margin-bottom: 20px;">Login / Register</h2>
+            <div class="input-group"><label>Full Name</label><input type="text" id="loginName" placeholder="Your name"></div>
+            <div class="input-group"><label>Phone Number</label><input type="tel" id="loginPhone" placeholder="09xxxxxxxx"></div>
+            <div class="input-group"><label>Password</label><input type="password" id="loginPassword" placeholder="******"></div>
             <button id="doLoginBtn">Enter Casino</button>
-            <p class="login-note">Play Bingo & Win Big!</p>
+            <p class="login-note" style="font-size:11px; text-align:center; margin-top:16px; opacity:0.6;">Play Bingo & Win Big!</p>
         </div>
     </div>
 
-    <!-- ==================== LOBBY PAGE ==================== -->
+    <!-- LOBBY PAGE -->
     <div id="lobbyPage" class="hidden">
         <div class="header-bar">
-            <div class="flex-row">
-                <span id="lobbyUserName" class="user-name">Player</span>
-                <span class="user-balance">💰 <span id="lobbyUserBalance">0</span> Birr</span>
-            </div>
+            <div class="flex-row"><span id="lobbyUserName" class="user-name">Player</span><span class="user-balance">💰 <span id="lobbyUserBalance">0</span> Birr</span></div>
             <div class="button-group">
                 <button id="lobbyProfileBtn" class="secondary small">Profile</button>
                 <button id="lobbyDepositBtn" class="secondary small">Deposit</button>
@@ -58,7 +125,6 @@
             </div>
         </div>
 
-        <!-- Waiting Section (hidden by default) -->
         <div id="waitingSection" class="waiting-players hidden">
             <i class="fas fa-users"></i>
             <h3 id="waitingStatus">Finding Players...</h3>
@@ -68,7 +134,6 @@
             <button id="cancelGameBtn" class="danger small">Cancel Entry</button>
         </div>
 
-        <!-- Entry Buttons -->
         <div class="entry-buttons-group" id="entryButtonsGroup">
             <button class="entry-button" data-entry="5">🎫 Entry 5 Birr</button>
             <button class="entry-button" data-entry="10">🎫 Entry 10 Birr</button>
@@ -77,7 +142,6 @@
             <button class="entry-button" data-entry="50">🎫 Entry 50 Birr</button>
         </div>
 
-        <!-- Game Rules -->
         <div class="glass-card rules-card">
             <h3>📜 Game Rules</h3>
             <p>✅ Min deposit: 50 Birr | Min withdrawal: 200 Birr</p>
@@ -87,13 +151,10 @@
         </div>
     </div>
 
-    <!-- ==================== GAME PAGE ==================== -->
+    <!-- GAME PAGE -->
     <div id="gamePage" class="hidden">
         <div class="header-bar">
-            <div class="flex-row">
-                <span id="gameUserName" class="user-name">Player</span>
-                <span class="user-balance">💰 <span id="gameUserBalance">0</span> Birr</span>
-            </div>
+            <div class="flex-row"><span id="gameUserName" class="user-name">Player</span><span class="user-balance">💰 <span id="gameUserBalance">0</span> Birr</span></div>
             <button id="exitGameBtn" class="secondary small">← Exit Game</button>
         </div>
 
@@ -105,46 +166,105 @@
         </div>
 
         <div class="game-container">
-            <div class="glass-card current-number-card">
-                <h3>🎯 Current Number</h3>
-                <div class="bingo-number" id="currentNumber">--</div>
-                <div>Called: <span id="calledCount">0</span>/75</div>
-            </div>
-            
-            <div class="glass-card bingo-card-container">
-                <h3>🎴 Your Bingo Card</h3>
-                <div class="bingo-card" id="bingoCardGrid"></div>
-                <button id="claimBingoBtn" class="success">🏆 Claim Bingo!</button>
-            </div>
-            
-            <div class="glass-card history-card">
-                <h3>📋 Winners</h3>
-                <div id="winnersList"></div>
-                <div class="stats-mini">✅ Wins: <span id="userWins">0</span> | ❌ Losses: <span id="userLosses">0</span></div>
-            </div>
+            <div class="glass-card current-number-card"><h3>🎯 Current Number</h3><div class="bingo-number" id="currentNumber">--</div><div>Called: <span id="calledCount">0</span>/75</div></div>
+            <div class="glass-card bingo-card-container"><h3>🎴 Your Bingo Card</h3><div class="bingo-card" id="bingoCardGrid"></div><button id="claimBingoBtn" class="success">🏆 Claim Bingo!</button></div>
+            <div class="glass-card history-card"><h3>📋 Winners</h3><div id="winnersList"></div><div class="stats-mini">✅ Wins: <span id="userWins">0</span> | ❌ Losses: <span id="userLosses">0</span></div></div>
         </div>
     </div>
 
-    <!-- ==================== ADMIN PAGE ==================== -->
+    <!-- ADMIN PAGE -->
     <div id="adminPage" class="hidden">
         <div class="admin-container">
-            <div class="admin-sidebar">
-                <h3><i class="fas fa-crown"></i> Admin Panel</h3>
-                <div class="admin-nav">
-                    <div class="admin-nav-item active" data-tab="dashboard">📊 Dashboard</div>
-                    <div class="admin-nav-item" data-tab="pending">⏳ Pending Users</div>
-                    <div class="admin-nav-item" data-tab="users">👥 All Users</div>
-                    <div class="admin-nav-item" data-tab="funds">💰 Add Funds</div>
-                    <div class="admin-nav-item" data-tab="withdrawals">💸 Withdrawals</div>
-                    <div class="admin-nav-item" id="adminExitBtn">🚪 Exit Admin</div>
-                </div>
+            <div class="admin-sidebar"><h3><i class="fas fa-crown"></i> Admin Panel</h3>
+                <div class="admin-nav"><div class="admin-nav-item active" data-tab="dashboard">📊 Dashboard</div>
+                <div class="admin-nav-item" data-tab="pending">⏳ Pending Users</div>
+                <div class="admin-nav-item" data-tab="users">👥 All Users</div>
+                <div class="admin-nav-item" data-tab="funds">💰 Add Funds</div>
+                <div class="admin-nav-item" data-tab="withdrawals">💸 Withdrawals</div>
+                <div class="admin-nav-item" id="adminExitBtn">🚪 Exit Admin</div></div>
             </div>
-            <div class="admin-content glass-card" id="adminContent">
-                <!-- Dynamic content loaded here -->
-            </div>
+            <div class="glass-card admin-content" id="adminContent"></div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // ==================== ALL JAVASCRIPT HERE ====================
+        // Ethiopian Male Names
+        const ETHIOPIAN_NAMES = ["Abel","Abiy","Abraham","Amanuel","Anteneh","Aregawi","Assefa","Ayele","Bayu","Belete","Bereket","Biruk","Chala","Dagnachew","Dawit","Demeke","Elias","Endale","Ermias","Eyob","Fekadu","Fikre","Fikru","Getachew","Girma","Habtamu","Haile","Henok","Kassahun","Kebede","Mekonnen","Melaku","Mesfin","Mulugeta","Nahom","Natnael","Robel","Samuel","Sisay","Solomon","Tadesse","Tekle","Tesfaye","Tilahun","Yared","Yonas","Yosef","Zelalem"];
+        
+        let currentUser = null, casinoUsers = [], pendingWithdrawals = [], userStreaks = {}, gameHistory = [], gameNumberCounter = 0;
+        let activeGameSession = null, playerBingoCard = [], isWaitingForPlayers = false, currentEntryAmount = 0, housePlayersInGame = [];
+        
+        const ADMIN_CRED = { name: '@rasenok', phone: '0962234766', password: '752121' };
+        const DEPOSIT_INFO = { telebirr: "0921302111", cbe: "1000318833625" };
+        const SUPPORT_INFO = { phone: "0921302111", telegram: "@rasenok" };
+        
+        function loadAllData() {
+            if(localStorage.getItem('casinoUsers')) casinoUsers = JSON.parse(localStorage.getItem('casinoUsers'));
+            if(localStorage.getItem('pendingWithdrawals')) pendingWithdrawals = JSON.parse(localStorage.getItem('pendingWithdrawals'));
+            if(localStorage.getItem('userStreaks')) userStreaks = JSON.parse(localStorage.getItem('userStreaks'));
+            if(localStorage.getItem('gameHistory')) gameHistory = JSON.parse(localStorage.getItem('gameHistory'));
+            if(localStorage.getItem('currentUser')) { try { currentUser = JSON.parse(localStorage.getItem('currentUser')); if(currentUser && !currentUser.isAdmin) showLobbyPage(); } catch(e){} }
+        }
+        function saveAllData() {
+            localStorage.setItem('casinoUsers', JSON.stringify(casinoUsers));
+            localStorage.setItem('pendingWithdrawals', JSON.stringify(pendingWithdrawals));
+            localStorage.setItem('userStreaks', JSON.stringify(userStreaks));
+            localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+            if(currentUser) localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+        function showToast(msg, type='info') { const c = document.getElementById('toastContainer'); const t = document.createElement('div'); t.className = `toast ${type}`; t.innerHTML = `<strong>${type.toUpperCase()}</strong><br>${msg}`; c.appendChild(t); setTimeout(() => t.classList.add('show'), 10); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000); }
+        function showPopup(content) { document.getElementById('popupContainer').innerHTML = `<div class="popup-overlay" onclick="if(event.target===this)closePopup()"><div class="popup-modal">${content}</div></div>`; }
+        function closePopup() { document.getElementById('popupContainer').innerHTML = ''; }
+        function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast(`Copied: ${text}`, 'success'); }
+        
+        function showDepositPopup() {
+            showPopup(`<div class="popup-header"><h2 class="popup-title">💰 Deposit Funds</h2><button class="close-popup" onclick="closePopup()">×</button></div><div class="account-info-card"><div class="account-row"><span class="account-label"><i class="fas fa-mobile-alt"></i> Tele Birr</span><div><span>${DEPOSIT_INFO.telebirr}</span><button class="copy-btn" onclick="copyToClipboard('${DEPOSIT_INFO.telebirr}')">Copy</button></div></div><div class="account-row"><span class="account-label"><i class="fas fa-university"></i> CBE Account</span><div><span>${DEPOSIT_INFO.cbe}</span><button class="copy-btn" onclick="copyToClipboard('${DEPOSIT_INFO.cbe}')">Copy</button></div></div></div><div class="input-group"><label>Amount (Min 50 Birr)</label><input type="number" id="depositAmount" placeholder="Enter amount"></div><div class="input-group"><label>Transaction ID</label><input type="text" id="transactionId" placeholder="Enter transaction ID"></div><button onclick="submitDepositRequest()">Submit Request</button><button class="secondary" onclick="closePopup()">Cancel</button>`);
+        }
+        function submitDepositRequest() { const a = parseInt(document.getElementById('depositAmount')?.value), t = document.getElementById('transactionId')?.value.trim(); if(!a||a<50){showToast("Minimum 50 Birr",'error');return;} if(!t){showToast("Enter transaction ID",'error');return;} pendingWithdrawals.push({type:'deposit',name:currentUser.name,phone:currentUser.phone,amount:a,transactionId:t}); saveAllData(); closePopup(); showToast(`Deposit request of ${a} Birr submitted!`,'success'); }
+        function showWithdrawPopup() {
+            showPopup(`<div class="popup-header"><h2 class="popup-title">💸 Withdraw Funds</h2><button class="close-popup" onclick="closePopup()">×</button></div><div class="account-info-card"><div class="account-row"><span>Balance:</span><strong>${currentUser?.balance||0} Birr</strong></div><div class="account-row"><span>Min Withdrawal:</span><strong>200 Birr</strong></div></div><div class="input-group"><label>Amount</label><input type="number" id="withdrawAmount" placeholder="Enter amount" max="${currentUser?.balance||0}"></div><div class="input-group"><label>Tele Birr Number</label><input type="tel" id="withdrawPhone" value="${currentUser?.phone||''}"></div><button onclick="submitWithdrawRequest()">Submit</button><button class="secondary" onclick="closePopup()">Cancel</button>`);
+        }
+        function submitWithdrawRequest() { const a = parseInt(document.getElementById('withdrawAmount')?.value), p = document.getElementById('withdrawPhone')?.value.trim(); if(!a||a<200){showToast("Minimum 200 Birr",'error');return;} if(a>(currentUser?.balance||0)){showToast("Insufficient balance",'error');return;} if(!p){showToast("Enter phone number",'error');return;} pendingWithdrawals.push({name:currentUser.name,phone:p,amount:a}); saveAllData(); closePopup(); showToast(`Withdrawal request of ${a} Birr submitted!`,'success'); }
+        function showSupportPopup() {
+            showPopup(`<div class="popup-header"><h2 class="popup-title">📞 Customer Support</h2><button class="close-popup" onclick="closePopup()">×</button></div><div class="account-info-card"><div class="account-row"><span class="account-label"><i class="fas fa-phone-alt"></i> Phone</span><div><span>${SUPPORT_INFO.phone}</span><button class="copy-btn" onclick="copyToClipboard('${SUPPORT_INFO.phone}')">Copy</button></div></div><div class="account-row"><span class="account-label"><i class="fab fa-telegram"></i> Telegram</span><div><span>${SUPPORT_INFO.telegram}</span><button class="copy-btn" onclick="copyToClipboard('${SUPPORT_INFO.telegram}')">Copy</button></div></div></div><div class="input-group"><label>Message</label><textarea id="supportMessage" rows="3" style="width:100%; padding:10px; background:rgba(255,255,255,0.1); border-radius:12px; color:white;"></textarea></div><button onclick="submitSupportMessage()">Send</button><button class="secondary" onclick="closePopup()">Close</button>`);
+        }
+        function submitSupportMessage() { const m = document.getElementById('supportMessage')?.value.trim(); if(!m){showToast("Enter message",'error');return;} closePopup(); showToast("Support message sent!",'success'); }
+        
+        function generateRandomHousePlayers(count) { const s = [...ETHIOPIAN_NAMES]; for(let i=s.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,count).map((n,i)=>({name:n,phone:`house_${Date.now()}_${i}`,isHouse:true})); }
+        function generateRandomCard() { let n=Array.from({length:75},(_,i)=>i+1); for(let i=n.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[n[i],n[j]]=[n[j],n[i]];} let s=n.slice(0,24),c=[],idx=0; for(let r=0;r<5;r++){let row=[]; for(let c2=0;c2<5;c2++){if(r===2&&c2===2)row.push({val:'FREE',called:true}); else row.push({val:s[idx++],called:false});} c.push(row);} return c; }
+        function renderBingoCard(card) { const cont=document.getElementById('bingoCardGrid'); if(!cont)return; cont.innerHTML=''; for(let r=0;r<5;r++){for(let c=0;c<5;c++){let cell=card[r][c],div=document.createElement('div'); div.className='bingo-cell'; if(cell.val==='FREE')div.classList.add('free'); if(cell.called)div.classList.add('called'); div.innerText=cell.val==='FREE'?'FREE':cell.val; cont.appendChild(div);}} }
+        function checkBingoOnCard(card,calledSet){for(let i=0;i<5;i++){if(card[i].every(cell=>(cell.val==='FREE')||calledSet.has(cell.val)))return true; if(card.every(row=>(row[i].val==='FREE')||calledSet.has(row[i].val)))return true;} let d1=true,d2=true; for(let i=0;i<5;i++){if(!(card[i][i].val==='FREE'||calledSet.has(card[i][i].val)))d1=false; if(!(card[i][4-i].val==='FREE'||calledSet.has(card[i][4-i].val)))d2=false;} return d1||d2; }
+        
+        function endGameWithWinner(winner,isPlayerWinner){if(!activeGameSession||activeGameSession.winnerDeclared)return; activeGameSession.winnerDeclared=true; if(activeGameSession.intervalId)clearInterval(activeGameSession.intervalId); if(activeGameSession.timerInterval)clearInterval(activeGameSession.timerInterval); let prize=activeGameSession.prizePool,wname=winner.name; if(isPlayerWinner&&winner.phone===currentUser?.phone){currentUser.balance+=prize; casinoUsers=casinoUsers.map(u=>u.phone===currentUser.phone?currentUser:u); let s=userStreaks[currentUser.phone]||{wins:0,losses:0}; s.wins+=1; userStreaks[currentUser.phone]=s; gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 YOU won ${prize} Birr!`); showToast(`🎉 YOU WON ${prize} Birr! 🎉`,'success'); for(let i=0;i<60;i++){let c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*100+'%';c.style.animationDelay=Math.random()*0.5+'s';c.style.background=`hsl(${Math.random()*360},70%,60%)`;document.getElementById('celebration').appendChild(c);setTimeout(()=>c.remove(),2000);}}else{let s=userStreaks[currentUser?.phone]||{wins:0,losses:0}; s.losses+=1; if(currentUser)userStreaks[currentUser.phone]=s; gameHistory.unshift(`${new Date().toLocaleTimeString()} - 🏆 ${wname} won ${prize} Birr!`); showToast(`🏆 ${wname} won ${prize} Birr!`,'info');} saveAllData(); updateUserUI(); if(gameHistory.length>20)gameHistory.pop(); let a=document.createElement('div'); a.className='winner-announcement'; a.innerHTML=`<i class="fas fa-trophy" style="font-size:2rem;color:gold;"></i><h2>WINNER!</h2><h1 style="color:gold;">${wname}</h1><p>Won ${prize} Birr!</p><button onclick="this.parentElement.remove()">Continue</button>`; document.body.appendChild(a); setTimeout(()=>{if(a)a.remove(); resetGameSession(); showLobbyPage();},4000); }
+        
+        function startGameCountdownAndPlay(){if(!activeGameSession||activeGameSession.winnerDeclared)return; activeGameSession.timeLeft=210; activeGameSession.timerInterval=setInterval(()=>{if(!activeGameSession||activeGameSession.winnerDeclared)return; activeGameSession.timeLeft--; let m=Math.floor(activeGameSession.timeLeft/60),s=activeGameSession.timeLeft%60,td=document.getElementById('gameTimeLeft'); if(td)td.innerText=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; if(activeGameSession.timeLeft<=0){clearInterval(activeGameSession.timerInterval);clearInterval(activeGameSession.intervalId);endGameWithWinner(housePlayersInGame[Math.floor(Math.random()*housePlayersInGame.length)],false);}},1000); activeGameSession.intervalId=setInterval(()=>{if(!activeGameSession||activeGameSession.winnerDeclared)return; let r=Array.from({length:75},(_,i)=>i+1).filter(n=>!activeGameSession.calledNumbers.includes(n)); if(r.length===0){endGameWithWinner(housePlayersInGame[Math.floor(Math.random()*housePlayersInGame.length)],false);return;} let n=r[Math.floor(Math.random()*r.length)]; activeGameSession.calledNumbers.push(n); activeGameSession.currentNumber=n; let cn=document.getElementById('currentNumber'),cc=document.getElementById('calledCount'); if(cn)cn.innerText=n; if(cc)cc.innerText=activeGameSession.calledNumbers.length; let cs=new Set(activeGameSession.calledNumbers); if(checkBingoOnCard(playerBingoCard,cs)){let sw=(gameNumberCounter%5===1); if(sw)endGameWithWinner(currentUser,true); else endGameWithWinner(housePlayersInGame[Math.floor(Math.random()*housePlayersInGame.length)],false);}},2800);}
+        
+        function startGameNow(){if(!activeGameSession||activeGameSession.isActive)return; isWaitingForPlayers=false; activeGameSession.isActive=true; activeGameSession.calledNumbers=[]; let pc=document.getElementById('gamePlayerCount'),ea=document.getElementById('gameEntryAmount'),pp=document.getElementById('gamePrizePool'); if(pc)pc.innerText=activeGameSession.players.length; if(ea)ea.innerText=activeGameSession.entryFee+' Birr'; if(pp)pp.innerText=activeGameSession.prizePool; playerBingoCard=generateRandomCard(); renderBingoCard(playerBingoCard); hideAllPages(); let gp=document.getElementById('gamePage'); if(gp)gp.classList.remove('hidden'); startGameCountdownAndPlay(); showToast(`🔥 Game started with ${activeGameSession.players.length} players! Prize: ${activeGameSession.prizePool} Birr`,'success');}
+        
+        function startWaitingForPlayers(entryAmount){isWaitingForPlayers=true; currentEntryAmount=entryAmount; gameNumberCounter++; currentUser.balance-=entryAmount; casinoUsers=casinoUsers.map(u=>u.phone===currentUser.phone?currentUser:u); saveAllData(); updateUserUI(); let hc=Math.floor(Math.random()*15)+8; housePlayersInGame=generateRandomHousePlayers(hc); let all=[currentUser,...housePlayersInGame],prize=entryAmount*all.length; activeGameSession={isActive:false,players:all.map(p=>p.phone),playerNames:all.map(p=>({name:p.name})),entryFee:entryAmount,prizePool:prize,calledNumbers:[],currentNumber:null,intervalId:null,timerInterval:null,timeLeft:210,winnerDeclared:false}; let tc=document.getElementById('totalPlayersCount'),ws=document.getElementById('waitingStatus'),pl=document.getElementById('activePlayersList'); if(tc)tc.innerText=all.length; if(ws)ws.innerHTML=`✅ ${all.length} Players Ready! Starting...`; if(pl){pl.innerHTML=activeGameSession.playerNames.slice(0,30).map(p=>`<span class="player-badge ${p.name===currentUser.name?'':'house'}"><i class="fas ${p.name===currentUser.name?'fa-crown':'fa-user-circle'}"></i> ${p.name}</span>`).join(''); if(activeGameSession.playerNames.length>30)pl.innerHTML+=`<span class="player-badge">+${activeGameSession.playerNames.length-30} more</span>`;} setTimeout(()=>{if(isWaitingForPlayers&&activeGameSession&&!activeGameSession.isActive)startGameNow();},3000);}
+        
+        function cancelWaiting(){if(isWaitingForPlayers&&activeGameSession){currentUser.balance+=currentEntryAmount; casinoUsers=casinoUsers.map(u=>u.phone===currentUser.phone?currentUser:u); saveAllData(); updateUserUI(); resetGameSession(); isWaitingForPlayers=false; showToast(`Cancelled. ${currentEntryAmount} Birr refunded.`,'info'); showLobbyPage();}}
+        function resetGameSession(){if(activeGameSession?.intervalId)clearInterval(activeGameSession.intervalId); if(activeGameSession?.timerInterval)clearInterval(activeGameSession.timerInterval); activeGameSession=null; isWaitingForPlayers=false;}
+        function handleEntry(amount){if(!currentUser||currentUser.isAdmin){showToast("Login first",'error');return;} if(currentUser.balance<amount){showToast(`Need ${amount} Birr`,'error');return;} if(!currentUser.approved&&currentUser.phone!==ADMIN_CRED.phone){showToast("Pending admin approval",'warning');return;} if(isWaitingForPlayers||(activeGameSession&&activeGameSession.isActive)){showToast("Game in progress",'warning');return;} startWaitingForPlayers(amount); hideAllPages(); showLobbyPage(); let ws=document.getElementById('waitingSection'),eb=document.getElementById('entryButtonsGroup'); if(ws)ws.classList.remove('hidden'); if(eb)eb.style.display='none'; showToast(`Entered ${amount} Birr. Finding players...`,'info');}
+        function claimBingoManually(){if(!activeGameSession||!activeGameSession.isActive||activeGameSession.winnerDeclared){showToast("No active game",'error');return;} let cs=new Set(activeGameSession.calledNumbers); if(checkBingoOnCard(playerBingoCard,cs)){let sw=(gameNumberCounter%5===1); if(sw)endGameWithWinner(currentUser,true); else endGameWithWinner(housePlayersInGame[Math.floor(Math.random()*housePlayersInGame.length)],false);}else{showToast("No Bingo yet!",'warning');}}
+        
+        function updateUserUI(){if(!currentUser||currentUser.isAdmin)return; let lb=document.getElementById('lobbyUserBalance'),gb=document.getElementById('gameUserBalance'),ln=document.getElementById('lobbyUserName'),gn=document.getElementById('gameUserName'); if(lb)lb.innerText=currentUser.balance||0; if(gb)gb.innerText=currentUser.balance||0; if(ln)ln.innerText=currentUser.name; if(gn)gn.innerText=currentUser.name; let s=userStreaks[currentUser.phone]||{wins:0,losses:0},w=document.getElementById('userWins'),l=document.getElementById('userLosses'); if(w)w.innerText=s.wins||0; if(l)l.innerText=s.losses||0;}
+        function updateWinnersList(){let wd=document.getElementById('winnersList'); if(wd){if(gameHistory.length>0)wd.innerHTML=gameHistory.slice(0,8).map(h=>`<div>🏆 ${h}</div>`).join(''); else wd.innerHTML='<div>No recent winners</div>';}}
+        function hideAllPages(){let lp=document.getElementById('loginPage'),lo=document.getElementById('lobbyPage'),gp=document.getElementById('gamePage'),ap=document.getElementById('adminPage'); if(lp)lp.classList.add('hidden'); if(lo)lo.classList.add('hidden'); if(gp)gp.classList.add('hidden'); if(ap)ap.classList.add('hidden');}
+        function showLobbyPage(){resetGameSession(); hideAllPages(); let lp=document.getElementById('lobbyPage'); if(lp)lp.classList.remove('hidden'); let ws=document.getElementById('waitingSection'),eb=document.getElementById('entryButtonsGroup'); if(ws)ws.classList.add('hidden'); if(eb)eb.style.display='flex'; updateUserUI(); updateWinnersList(); let st=document.getElementById('serverStatus'); if(st){st.innerHTML='✅ Game Ready | Local Mode'; st.style.background='rgba(42,157,143,0.7)';}}
+        function showProfilePopup(){showToast(`${currentUser?.name}\nBalance: ${currentUser?.balance} Birr\nStatus: ${currentUser?.approved?'Approved':'Pending'}`,'info');}
+        
+        function showAdminDashboard(){hideAllPages(); let ap=document.getElementById('adminPage'); if(ap)ap.classList.remove('hidden'); let tu=casinoUsers.length,tb=casinoUsers.reduce((s,u)=>s+(u.balance||0),0),pu=casinoUsers.filter(u=>!u.approved).length,cont=document.getElementById('adminContent'); if(cont){cont.innerHTML=`<div class="dashboard-cards"><div class="card"><div class="card-value">${tu}</div><div>Total Users</div></div><div class="card"><div class="card-value">${tb}</div><div>Total Balance</div></div><div class="card"><div class="card-value">${pu}</div><div>Pending Users</div></div><div class="card"><div class="card-value">${pendingWithdrawals.length}</div><div>Withdrawals</div></div></div><h3 style="color:var(--accent);margin-top:20px;">⏳ Pending Users</h3>${casinoUsers.filter(u=>!u.approved).map(u=>`<div class="card" style="margin-bottom:10px;"><div><strong>${u.name}</strong> | ${u.phone}</div><button onclick="approveUser('${u.phone}')" style="margin-top:8px;">Approve</button></div>`).join('')||'<p>No pending users</p>'}<h3 style="color:var(--accent);margin-top:20px;">💸 Withdrawals</h3>${pendingWithdrawals.map((w,i)=>`<div class="card" style="margin-bottom:10px;"><div><strong>${w.name}</strong> | ${w.amount} Birr</div><button onclick="approveWithdraw(${i})" style="margin-top:8px;">Approve</button></div>`).join('')||'<p>No pending withdrawals</p>'}<h3 style="color:var(--accent);margin-top:20px;">💰 Add Funds</h3><input id="fundsPhone" placeholder="Phone Number" style="width:100%;margin-bottom:10px;"><input id="fundsAmount" placeholder="Amount" type="number" style="width:100%;margin-bottom:10px;"><button onclick="adminAddFunds()">Add Funds</button>`;}}
+        window.approveUser=(phone)=>{let u=casinoUsers.find(u=>u.phone===phone); if(u){u.approved=true; saveAllData(); showAdminDashboard(); showToast("User approved!",'success');}};
+        window.approveWithdraw=(idx)=>{pendingWithdrawals.splice(idx,1); saveAllData(); showAdminDashboard(); showToast("Withdrawal approved!",'success');};
+        window.adminAddFunds=()=>{let p=document.getElementById('fundsPhone')?.value,a=parseInt(document.getElementById('fundsAmount')?.value),u=casinoUsers.find(u=>u.phone===p); if(u&&a>0){u.balance=(u.balance||0)+a; saveAllData(); showToast(`Added ${a} Birr to ${u.name}`,'success'); showAdminDashboard();}else{showToast("User not found",'error');}};
+        function switchAdminTab(tab){if(tab==='dashboard')showAdminDashboard(); else if(tab==='pending'){let cont=document.getElementById('adminContent'),p=casinoUsers.filter(u=>!u.approved); if(cont)cont.innerHTML=`<h3>Pending Users</h3>${p.map(u=>`<div class="card" style="margin-bottom:10px;"><div><strong>${u.name}</strong> | ${u.phone}</div><button onclick="approveUser('${u.phone}')">Approve</button></div>`).join('')||'<p>No pending users</p>'}`;} else if(tab==='users'){let cont=document.getElementById('adminContent'); if(cont)cont.innerHTML=`<h3>All Users</h3>${casinoUsers.map(u=>`<div class="card" style="margin-bottom:10px;"><div><strong>${u.name}</strong> | ${u.phone} | Balance: ${u.balance} Birr | ${u.approved?'✅':'⏳'}</div></div>`).join('')}`;} else if(tab==='funds'){let cont=document.getElementById('adminContent'); if(cont)cont.innerHTML=`<h3>Add Funds</h3><input id="fundsPhone" placeholder="Phone Number"><input id="fundsAmount" placeholder="Amount" type="number"><button onclick="adminAddFunds()">Add Funds</button>`;} else if(tab==='withdrawals'){let cont=document.getElementById('adminContent'); if(cont)cont.innerHTML=`<h3>Withdrawals</h3>${pendingWithdrawals.map((w,i)=>`<div class="card" style="margin-bottom:10px;"><div><strong>${w.name}</strong> | ${w.amount} Birr</div><button onclick="approveWithdraw(${i})">Approve</button></div>`).join('')||'<p>No pending withdrawals</p>'}`;}}
+        
+        function handleLogin(){let n=document.getElementById('loginName').value.trim(),p=document.getElementById('loginPhone').value.trim(),pw=document.getElementById('loginPassword').value.trim(); if(!n||!p||!pw){showToast("All fields required",'error');return;} if(n===ADMIN_CRED.name&&p===ADMIN_CRED.phone&&pw===ADMIN_CRED.password){currentUser={name:n,phone:p,isAdmin:true}; showAdminDashboard(); showToast("Welcome Admin!",'success');return;} let u=casinoUsers.find(u=>u.phone===p&&u.password===pw); if(u){if(u.blocked){showToast("Account blocked",'error');return;} currentUser=u; saveAllData(); showLobbyPage(); updateUserUI(); showToast(`Welcome back ${u.name}!`,'success');}else{let nu={id:Date.now(),name:n,phone:p,password:pw,balance:0,wins:0,losses:0,approved:false,blocked:false}; casinoUsers.push(nu); currentUser=nu; saveAllData(); showLobbyPage(); updateUserUI(); showToast("Registered! Wait admin approval.",'info');}}
+        function handleLogout(){currentUser=null; localStorage.removeItem('currentUser'); resetGameSession(); hideAllPages(); let lp=document.getElementById('loginPage'); if(lp)lp.classList.remove('hidden'); showToast("Logged out",'info');}
+        
+        document.addEventListener('DOMContentLoaded',()=>{loadAllData(); document.getElementById('doLoginBtn')?.addEventListener('click',handleLogin); document.getElementById('lobbyProfileBtn')?.addEventListener('click',showProfilePopup); document.getElementById('lobbyDepositBtn')?.addEventListener('click',showDepositPopup); document.getElementById('lobbyWithdrawBtn')?.addEventListener('click',showWithdrawPopup); document.getElementById('lobbySupportBtn')?.addEventListener('click',showSupportPopup); document.getElementById('lobbyLogoutBtn')?.addEventListener('click',handleLogout); document.getElementById('cancelGameBtn')?.addEventListener('click',cancelWaiting); document.getElementById('exitGameBtn')?.addEventListener('click',showLobbyPage); document.getElementById('claimBingoBtn')?.addEventListener('click',claimBingoManually); document.getElementById('adminExitBtn')?.addEventListener('click',()=>{currentUser=null; hideAllPages(); document.getElementById('loginPage').classList.remove('hidden');}); document.querySelectorAll('.entry-button').forEach(btn=>{btn.addEventListener('click',()=>{let a=parseInt(btn.getAttribute('data-entry')); handleEntry(a);});}); document.querySelectorAll('.admin-nav-item').forEach(item=>{if(item.getAttribute('data-tab')){item.addEventListener('click',()=>{document.querySelectorAll('.admin-nav-item').forEach(n=>n.classList.remove('active')); item.classList.add('active'); switchAdminTab(item.getAttribute('data-tab'));});}}); if(!currentUser){hideAllPages(); document.getElementById('loginPage').classList.remove('hidden');}else{showLobbyPage();}});
+    </script>
 </body>
 </html>
